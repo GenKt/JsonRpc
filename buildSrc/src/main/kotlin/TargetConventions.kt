@@ -14,20 +14,12 @@ fun getJvmTargetByVersion(version: Int) = when (version) {
     else -> JvmTarget.DEFAULT
 }
 
-fun getVersionStringByVersion(version: Int) = when (version) {
-    8 -> "1.8"
-    11 -> "11"
-    17 -> "17"
-    21 -> "21"
-    else -> "1.8"
-}
-
 fun KotlinMultiplatformExtension.configureJvm(jdkVersion: Int) {
     jvm {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget = getJvmTargetByVersion(jdkVersion)
-            freeCompilerArgs.addAll("-Xjdk-release=${getVersionStringByVersion(jdkVersion)}", "-Xjvm-default=all-compatibility")
+            freeCompilerArgs.addAll("-Xjvm-default=all-compatibility")
         }
     }
     jvmToolchain(jdkVersion)
