@@ -1,12 +1,7 @@
 package io.github.stream29.langchain4kt2.core
 
 import kotlinx.serialization.Serializable
-
-@Serializable
-public data class Response<out Content, out MetaInfo>(
-    val content: Content,
-    val metaInfo: MetaInfo
-)
+import kotlin.jvm.JvmInline
 
 @Serializable
 public enum class DataDirection {
@@ -14,80 +9,32 @@ public enum class DataDirection {
     Output
 }
 
-public interface Message {
+public interface Message<Content> {
     public val direction: DataDirection
-}
-
-public abstract class InputMessage : Message {
-    public override val direction: DataDirection
-        get() = DataDirection.Input
-}
-
-public abstract class OutputMessage : Message {
-    public override val direction: DataDirection
-        get() = DataDirection.Output
-}
-
-public data class ListInputMessage<out T>(
-    val list: List<T>
-) : InputMessage()
-
-public data class ListOutputMessage<out T>(
-    val list: List<T>
-) : OutputMessage()
-
-public interface TextMessage : Message {
-    public val text: String
-}
-
-public interface UrlImageMessage : Message {
-    public val url: String
+    public val content: Content
 }
 
 @Serializable
-public data class SystemTextMessage(
-    public override val text: String
-) : InputMessage(), TextMessage
+@JvmInline
+public value class SystemInstruction(public val instruction: String)
 
 @Serializable
-public data class UserTextMessage(
-    public override val text: String
-) : InputMessage(), TextMessage
+@JvmInline
+public value class Text(public val text: String)
 
 @Serializable
-public data class UserUrlImageMessage(
-    public override val url: String
-) : InputMessage(), UrlImageMessage
+@JvmInline
+public value class Reasoning(public val reasoning: String)
 
 @Serializable
-public data class ModelTextMessage(
-    public override val text: String
-) : OutputMessage(), TextMessage
+public data class ToolCallRequest(
+    public val toolId: String,
+    public val param: String
+)
+
 
 @Serializable
-public data class ModelUrlImageMessage(
-    public override val url: String
-) : OutputMessage(), UrlImageMessage
-
-@Serializable
-public data class ToolCallRequestMessage(
-    val toolId: String,
-    val param: String
-) : OutputMessage()
-
-@Serializable
-public data class ToolCallRequestListMessage(
-    val list: List<ToolCallRequestMessage>
-) : OutputMessage()
-
-@Serializable
-public data class ToolCallResultMessage(
-    val toolId: String,
-    val param: String,
-    val result: String
-) : InputMessage()
-
-@Serializable
-public data class ToolCallResultListMessage(
-    val list: List<ToolCallResultMessage>
-): InputMessage()
+@JvmInline
+public value class ToolCallResult(
+    public val result: String
+)
