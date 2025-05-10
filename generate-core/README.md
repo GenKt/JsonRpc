@@ -41,7 +41,7 @@ val version1 = base.configure {
 val version2 = base.configure {
     model = "model2"
 }
-// Then we can use version1 and version2 to with for different models, sharing the same apiKey
+// Then we can use version1 and version2 to generate with different models, sharing the same apiKey
 ```
 
 After we complete the configuration, we need to fill the request with the input.
