@@ -15,7 +15,7 @@ fun genKtModules(vararg modules: String) {
 }
 
 genKtModules(
-    "core",
+    "generate-core",
     "mcp-common",
     "mcp-server",
     "mcp-client",
