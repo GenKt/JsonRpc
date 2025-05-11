@@ -1,16 +1,8 @@
 package io.github.genkt.jsonprc.client
 
-import io.github.genkt.jsonrpc.JsonRpcClientTransport
-import io.github.genkt.jsonrpc.JsonRpcFailResponse
-import io.github.genkt.jsonrpc.JsonRpcNotification
-import io.github.genkt.jsonrpc.JsonRpcRequest
-import io.github.genkt.jsonrpc.JsonRpcServerMessage
-import io.github.genkt.jsonrpc.JsonRpcServerMessageBatch
-import io.github.genkt.jsonrpc.JsonRpcSuccessResponse
-import io.github.genkt.jsonrpc.RequestId
+import io.github.genkt.jsonrpc.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.Continuation
@@ -48,7 +40,7 @@ public class JsonRpcClient(
     }
 
     private val receiveJob = CoroutineScope(coroutineContext).launch {
-        transport.receiveChannel.consumeAsFlow()
+        transport.receiveFlow
             .catch { coroutineContext.handleException(it) }
             .collect { handleResponse(it) }
     }
@@ -70,8 +62,7 @@ public class JsonRpcClient(
 
     override fun close() {
         receiveJob.cancel()
-        transport.sendChannel.close()
-        transport.receiveChannel.cancel()
+        transport.close()
     }
 }
 

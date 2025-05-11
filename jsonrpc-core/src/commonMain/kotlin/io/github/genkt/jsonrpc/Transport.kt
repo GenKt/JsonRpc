@@ -1,106 +1,92 @@
 package io.github.genkt.jsonrpc
 
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.io.Sink
-import kotlinx.io.Source
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonElement
 
-public data class JsonTransport(
-    public val sendChannel: SendChannel<JsonElement>,
-    public val receiveChannel: ReceiveChannel<JsonElement>
-)
-
-public data class StringTransport(
-    public val sendChannel: SendChannel<String>,
-    public val receiveChannel: ReceiveChannel<String>
-)
-
-public data class ByteTransport(
-    public val source: Source,
-    public val sink: Sink
-)
-
-public data class JsonRpcTransport(
-    public val sendChannel: SendChannel<JsonRpcMessage>,
-    public val receiveChannel: ReceiveChannel<JsonRpcMessage>
-)
-
-public data class JsonRpcClientTransport(
-    public val sendChannel: SendChannel<JsonRpcClientMessage>,
-    public val receiveChannel: ReceiveChannel<JsonRpcServerMessage>
-)
-
-public data class JsonRpcServerTransport(
-    public val sendChannel: SendChannel<JsonRpcServerMessage>,
-    public val receiveChannel: ReceiveChannel<JsonRpcClientMessage>
-)
-
-public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport = JsonRpcClientTransport(
-    sendChannel = sendChannel.mapFrom {
-        JsonRpc.json.encodeToJsonElement(JsonRpcClientMessageSerializer, it)
-    },
-    receiveChannel = receiveChannel.mapTo {
-        JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it)
-    }
-)
-
-public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport = JsonRpcServerTransport(
-    sendChannel = sendChannel.mapFrom {
-        JsonRpc.json.encodeToJsonElement(JsonRpcServerMessageSerializer, it)
-    },
-    receiveChannel = receiveChannel.mapTo {
-        JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it)
-    }
-)
-
-public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport = JsonRpcTransport(
-    sendChannel = sendChannel.mapFrom {
-        JsonRpc.json.encodeToJsonElement(JsonRpcMessageSerializer, it)
-    },
-    receiveChannel = receiveChannel.mapTo {
-        JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it)
-    }
-)
-
-public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport = JsonRpcClientTransport(
-    sendChannel = sendChannel,
-    receiveChannel = receiveChannel.mapTo {
-        when (it) {
-            is JsonRpcClientMessage -> JsonRpcServerMessageBatch(emptyList())
-            is JsonRpcServerMessage -> it
-        }
-    }
-)
-
-public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport = JsonRpcServerTransport(
-    sendChannel = sendChannel,
-    receiveChannel = receiveChannel.mapTo {
-        when (it) {
-            is JsonRpcClientMessage -> it
-            is JsonRpcServerMessage -> JsonRpcClientMessageBatch(emptyList())
-        }
-    }
-)
-
-public fun ByteTransport.asStringTransport(): StringTransport {
-    return StringTransport(
-        sendChannel = sink.toStringChannel(),
-        receiveChannel = source.toStringChannel(),
-    )
+public interface Transport<Input, Output> : AutoCloseable {
+    public val sendChannel: SendChannel<Input>
+    public val receiveFlow: Flow<Output>
 }
+
+public fun <Input, Output, NewInput, NewOutput> Transport<Input, Output>.map(
+    transform: (NewInput) -> Input,
+    reverseTransform: (Output) -> NewOutput
+): Transport<NewInput, NewOutput> =
+    DelegatingTransport(
+        sendChannel = sendChannel.mapFrom(transform),
+        receiveFlow = receiveFlow.map(reverseTransform),
+        delegate = this
+    )
+
+public fun <Input, Output> Transport(
+    sendChannel: SendChannel<Input>,
+    receiveFlow: Flow<Output>,
+    onClose: () -> Unit = {},
+): Transport<Input, Output> =
+    TransportImpl(
+        sendChannel = sendChannel,
+        receiveFlow = receiveFlow,
+        onClose = onClose
+    )
+
+public fun <T, R> SendChannel<R>.mapFrom(transform: (T) -> R): SendChannel<T> =
+    DelegatingSendChannel(
+        delegate = this,
+        transform = transform
+    )
+
+public typealias JsonTransport = Transport<JsonElement, JsonElement>
+public typealias StringTransport = Transport<String, String>
+public typealias JsonRpcTransport = Transport<JsonRpcMessage, JsonRpcMessage>
+public typealias JsonRpcClientTransport = Transport<JsonRpcClientMessage, JsonRpcServerMessage>
+public typealias JsonRpcServerTransport = Transport<JsonRpcServerMessage, JsonRpcClientMessage>
+
+public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
+    map(
+        { JsonRpc.json.encodeToJsonElement(JsonRpcClientMessageSerializer, it) },
+        { JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it) }
+    )
+
+public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
+    map(
+        { JsonRpc.json.encodeToJsonElement(JsonRpcServerMessageSerializer, it) },
+        { JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it) }
+    )
+
+public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
+    map(
+        { JsonRpc.json.encodeToJsonElement(JsonRpcMessageSerializer, it) },
+        { JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it) }
+    )
+
+public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport =
+    map(
+        { it },
+        {
+            when (it) {
+                is JsonRpcClientMessage -> JsonRpcServerMessageBatch(emptyList())
+                is JsonRpcServerMessage -> it
+            }
+        }
+    )
+
+public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
+    map(
+        { it },
+        {
+            when (it) {
+                is JsonRpcClientMessage -> it
+                is JsonRpcServerMessage -> JsonRpcClientMessageBatch(emptyList())
+            }
+        }
+    )
 
 public fun StringTransport.asJsonTransport(parse: (Flow<String>) -> Flow<String>): JsonTransport {
-    return JsonTransport(
+    return TransportImpl(
         sendChannel = sendChannel.mapFrom { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
-        receiveChannel = receiveChannel.consumeAsFlow()
-            .let(parse)
-            .asChannel()
-            .mapTo { JsonRpc.json.decodeFromString(it) },
+        receiveFlow = parse(receiveFlow).map { JsonRpc.json.parseToJsonElement(it) },
+        onClose = ::close
     )
 }
-
-public fun ByteTransport.asJsonTransport(parse: (Flow<String>) -> Flow<String>): JsonTransport =
-    asStringTransport().asJsonTransport(parse)
