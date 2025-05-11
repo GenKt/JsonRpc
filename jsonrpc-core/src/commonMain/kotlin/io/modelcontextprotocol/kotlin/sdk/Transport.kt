@@ -4,17 +4,17 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.serialization.json.JsonObject
 
-public interface JsonTransport {
-    public val sendChannel: SendChannel<JsonObject>
+public data class JsonTransport(
+    public val sendChannel: SendChannel<JsonObject>,
     public val receiveChannel: ReceiveChannel<JsonObject>
-}
+)
 
-public interface JsonRpcClientTransport {
-    public val sendChannel: SendChannel<JsonRpcClientMessage>
+public data class JsonRpcClientTransport(
+    public val sendChannel: SendChannel<JsonRpcClientMessage>,
     public val receiveChannel: ReceiveChannel<JsonRpcServerMessage>
-}
+)
 
-public interface JsonRpcServerTransport {
-    public val sendChannel: SendChannel<JsonRpcServerMessage>
+public data class JsonRpcServerTransport(
+    public val sendChannel: SendChannel<JsonRpcServerMessage>,
     public val receiveChannel: ReceiveChannel<JsonRpcClientMessage>
-}
+)
