@@ -11,6 +11,11 @@ public data class JsonTransport(
     public val receiveChannel: ReceiveChannel<JsonElement>
 )
 
+public data class StringTransport(
+    public val sendChannel: SendChannel<String>,
+    public val receiveChannel: ReceiveChannel<String>
+)
+
 public data class ByteTransport(
     public val source: Source,
     public val sink: Sink
