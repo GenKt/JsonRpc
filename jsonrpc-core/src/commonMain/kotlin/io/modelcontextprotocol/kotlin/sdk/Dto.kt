@@ -15,16 +15,22 @@ public sealed interface JsonRpcClientMessage : JsonRpcMessage
 @Serializable(with = JsonRpcServerMessageSerializer::class)
 public sealed interface JsonRpcServerMessage : JsonRpcMessage
 
+@Serializable(with = JsonRpcClientSingleMessageSerializer::class)
+public sealed interface JsonRpcClientSingleMessage : JsonRpcClientMessage
+
+@Serializable(with = JsonRpcServerSingleMessageSerializer::class)
+public sealed interface JsonRpcServerSingleMessage : JsonRpcServerMessage
+
 @Serializable
 @JvmInline
 public value class JsonRpcServerMessageBatch(
-    public val messages: List<JsonRpcServerMessage>,
+    public val messages: List<JsonRpcServerSingleMessage>,
 ) : JsonRpcServerMessage
 
 @Serializable
 @JvmInline
 public value class JsonRpcClientMessageBatch(
-    public val messages: List<JsonRpcClientMessage>,
+    public val messages: List<JsonRpcClientSingleMessage>,
 ) : JsonRpcClientMessage
 
 @Serializable
@@ -33,28 +39,28 @@ public data class JsonRpcRequest(
     public val method: String,
     public val params: JsonElement = JsonObject.Empty,
     public val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcClientMessage
+) : JsonRpcClientSingleMessage
 
 @Serializable
 public data class JsonRpcNotification(
     public val method: String,
     public val params: JsonElement = JsonObject.Empty,
     public val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcClientMessage
+) : JsonRpcClientSingleMessage
 
 @Serializable
 public class JsonRpcSuccessResponse(
     public val id: RequestId,
     public val jsonrpc: String = JsonRpc.VERSION,
     public val result: JsonElement,
-) : JsonRpcServerMessage
+) : JsonRpcServerSingleMessage
 
 @Serializable
 public class JsonRpcFailResponse(
     public val id: RequestId,
     public val error: Error,
     public val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcServerMessage {
+) : JsonRpcServerSingleMessage {
     @Serializable
     public data class Error(
         public val code: Code,
