@@ -1,7 +1,5 @@
 plugins {
     id("kotlin-multiplatform-ktor")
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.atomicfu)
     id("publishing-convention")
 }
 
