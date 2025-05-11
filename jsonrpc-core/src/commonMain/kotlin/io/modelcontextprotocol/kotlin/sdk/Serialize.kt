@@ -8,7 +8,12 @@ import kotlinx.serialization.json.*
 internal object JsonRpcMessageSerializer :
     JsonContentPolymorphicSerializer<JsonRpcMessage>(JsonRpcMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcMessage> {
-        val jsonObject = element.jsonObject
+        val jsonObject = if (element is JsonArray) {
+            if (element.isEmpty())
+                return JsonRpcClientMessageBatch.serializer()
+            else
+                element.first().jsonObject
+        } else element.jsonObject
         return when {
             !jsonObject.contains("method") -> JsonRpcSuccessResponse.serializer()
             jsonObject.contains("id") -> JsonRpcRequest.serializer()
@@ -17,9 +22,11 @@ internal object JsonRpcMessageSerializer :
     }
 }
 
-internal object JsonRpcSendMessageSerializer :
+internal object JsonRpcClientMessageSerializer :
     JsonContentPolymorphicSerializer<JsonRpcClientMessage>(JsonRpcClientMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcClientMessage> {
+        if (element is JsonArray)
+            return JsonRpcClientMessageBatch.serializer()
         val jsonObject = element.jsonObject
         return when {
             jsonObject.contains("id") -> JsonRpcRequest.serializer()
@@ -28,9 +35,11 @@ internal object JsonRpcSendMessageSerializer :
     }
 }
 
-internal object JsonRpcReceiveMessageSerializer :
+internal object JsonRpcServerMessageSerializer :
     JsonContentPolymorphicSerializer<JsonRpcServerMessage>(JsonRpcServerMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcServerMessage> {
+        if (element is JsonArray)
+            return JsonRpcServerMessageBatch.serializer()
         val jsonObject = element.jsonObject
         return when {
             jsonObject.contains("result") -> JsonRpcSuccessResponse.serializer()

@@ -9,52 +9,52 @@ import kotlin.jvm.JvmInline
 @Serializable(with = JsonRpcMessageSerializer::class)
 public sealed interface JsonRpcMessage
 
-@Serializable(with = JsonRpcSendMessageSerializer::class)
-public sealed interface JsonRpcClientMessage : JsonRpcMessage {
-    public val jsonrpc: String
-    public val method: String
-}
+@Serializable(with = JsonRpcClientMessageSerializer::class)
+public sealed interface JsonRpcClientMessage : JsonRpcMessage
 
-@Serializable(with = JsonRpcReceiveMessageSerializer::class)
-public sealed interface JsonRpcServerMessage : JsonRpcMessage {
-    public val jsonrpc: String
-    public val id: RequestId
-    public val success: Boolean
-}
+@Serializable(with = JsonRpcServerMessageSerializer::class)
+public sealed interface JsonRpcServerMessage : JsonRpcMessage
+
+@Serializable
+@JvmInline
+public value class JsonRpcServerMessageBatch(
+    public val messages: List<JsonRpcServerMessage>,
+) : JsonRpcServerMessage
+
+@Serializable
+@JvmInline
+public value class JsonRpcClientMessageBatch(
+    public val messages: List<JsonRpcClientMessage>,
+) : JsonRpcClientMessage
 
 @Serializable
 public data class JsonRpcRequest(
     public val id: RequestId,
-    public override val method: String,
+    public val method: String,
     public val params: JsonElement = JsonObject.Empty,
-    public override val jsonrpc: String = JsonRpc.VERSION,
+    public val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientMessage
 
 @Serializable
 public data class JsonRpcNotification(
-    public override val method: String,
+    public val method: String,
     public val params: JsonElement = JsonObject.Empty,
-    public override val jsonrpc: String = JsonRpc.VERSION,
+    public val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientMessage
 
 @Serializable
 public class JsonRpcSuccessResponse(
-    public override val id: RequestId,
-    public override val jsonrpc: String = JsonRpc.VERSION,
+    public val id: RequestId,
+    public val jsonrpc: String = JsonRpc.VERSION,
     public val result: JsonElement,
-) : JsonRpcServerMessage {
-    override val success: Boolean
-        get() = true
-}
+) : JsonRpcServerMessage
 
 @Serializable
 public class JsonRpcFailResponse(
-    public override val id: RequestId,
+    public val id: RequestId,
     public val error: Error,
-    public override val jsonrpc: String = JsonRpc.VERSION,
+    public val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcServerMessage {
-    override val success: Boolean
-        get() = false
     @Serializable
     public data class Error(
         public val code: Code,
@@ -106,4 +106,5 @@ public val JsonRpcFailResponse.Error.Code.Companion.InternalError: JsonRpcFailRe
 }
 
 @Suppress("FunctionName")
-public fun JsonRpcFailResponse.Error.Code.Companion.Custom(code: Int): JsonRpcFailResponse.Error.Code = JsonRpcFailResponse.Error.Code(code)
+public fun JsonRpcFailResponse.Error.Code.Companion.Custom(code: Int): JsonRpcFailResponse.Error.Code =
+    JsonRpcFailResponse.Error.Code(code)
