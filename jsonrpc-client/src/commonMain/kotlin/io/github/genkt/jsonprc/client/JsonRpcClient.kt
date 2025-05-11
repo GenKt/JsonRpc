@@ -1,6 +1,13 @@
 package io.github.genkt.jsonprc.client
 
-import io.modelcontextprotocol.kotlin.sdk.*
+import io.github.genkt.jsonrpc.JsonRpcClientTransport
+import io.github.genkt.jsonrpc.JsonRpcFailResponse
+import io.github.genkt.jsonrpc.JsonRpcNotification
+import io.github.genkt.jsonrpc.JsonRpcRequest
+import io.github.genkt.jsonrpc.JsonRpcServerMessage
+import io.github.genkt.jsonrpc.JsonRpcServerMessageBatch
+import io.github.genkt.jsonrpc.JsonRpcSuccessResponse
+import io.github.genkt.jsonrpc.RequestId
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.consumeAsFlow

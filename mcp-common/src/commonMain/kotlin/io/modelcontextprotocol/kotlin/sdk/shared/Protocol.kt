@@ -1,5 +1,6 @@
 package io.modelcontextprotocol.kotlin.sdk.shared
 
+import io.github.genkt.jsonrpc.RequestId
 import io.modelcontextprotocol.kotlin.sdk.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred

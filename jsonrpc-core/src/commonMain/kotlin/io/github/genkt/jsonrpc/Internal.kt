@@ -1,4 +1,4 @@
-package io.modelcontextprotocol.kotlin.sdk
+package io.github.genkt.jsonrpc
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel

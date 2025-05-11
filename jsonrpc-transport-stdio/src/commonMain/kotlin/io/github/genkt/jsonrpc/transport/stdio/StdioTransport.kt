@@ -1,6 +1,6 @@
 package io.github.genkt.jsonrpc.transport.stdio
 
-import io.modelcontextprotocol.kotlin.sdk.StringTransport
+import io.github.genkt.jsonrpc.StringTransport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach

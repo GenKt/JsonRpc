@@ -1,8 +1,8 @@
 package io.github.genkt.jsonprc.client
 
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcFailResponse
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcRequest
-import io.modelcontextprotocol.kotlin.sdk.RequestId
+import io.github.genkt.jsonrpc.JsonRpcFailResponse
+import io.github.genkt.jsonrpc.JsonRpcRequest
+import io.github.genkt.jsonrpc.RequestId
 import kotlin.time.Duration
 
 public class JsonRpcResponseException(public val error: JsonRpcFailResponse.Error):

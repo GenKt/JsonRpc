@@ -1,4 +1,4 @@
-package io.modelcontextprotocol.kotlin.sdk
+package io.github.genkt.jsonrpc
 
 import io.github.stream29.streamlin.DelegatingSerializer
 import kotlinx.serialization.DeserializationStrategy

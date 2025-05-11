@@ -1,11 +1,11 @@
 package io.github.genkt.jsonrpc.server
 
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcClientMessage
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcClientMessageBatch
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcNotification
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcRequest
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcServerMessage
-import io.modelcontextprotocol.kotlin.sdk.JsonRpcServerTransport
+import io.github.genkt.jsonrpc.JsonRpcClientMessage
+import io.github.genkt.jsonrpc.JsonRpcClientMessageBatch
+import io.github.genkt.jsonrpc.JsonRpcNotification
+import io.github.genkt.jsonrpc.JsonRpcRequest
+import io.github.genkt.jsonrpc.JsonRpcServerMessage
+import io.github.genkt.jsonrpc.JsonRpcServerTransport
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
