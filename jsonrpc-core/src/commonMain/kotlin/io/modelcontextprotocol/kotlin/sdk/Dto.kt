@@ -10,13 +10,13 @@ import kotlin.jvm.JvmInline
 public sealed interface JsonRpcMessage
 
 @Serializable(with = JsonRpcSendMessageSerializer::class)
-public sealed interface JsonRpcSendMessage : JsonRpcMessage {
+public sealed interface JsonRpcClientMessage : JsonRpcMessage {
     public val jsonrpc: String
     public val method: String
 }
 
 @Serializable(with = JsonRpcReceiveMessageSerializer::class)
-public sealed interface JsonRpcReceiveMessage : JsonRpcMessage {
+public sealed interface JsonRpcServerMessage : JsonRpcMessage {
     public val jsonrpc: String
     public val id: RequestId
     public val success: Boolean
@@ -28,21 +28,21 @@ public data class JsonRpcRequest(
     public override val method: String,
     public val params: JsonElement = JsonObject.Empty,
     public override val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcSendMessage
+) : JsonRpcClientMessage
 
 @Serializable
 public data class JsonRpcNotification(
     public override val method: String,
     public val params: JsonElement = JsonObject.Empty,
     public override val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcSendMessage
+) : JsonRpcClientMessage
 
 @Serializable
 public class JsonRpcSuccessResponse(
     public override val id: RequestId,
     public override val jsonrpc: String = JsonRpc.VERSION,
     public val result: JsonElement,
-) : JsonRpcReceiveMessage {
+) : JsonRpcServerMessage {
     override val success: Boolean
         get() = true
 }
@@ -52,7 +52,7 @@ public class JsonRpcFailResponse(
     public override val id: RequestId,
     public val error: Error,
     public override val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcReceiveMessage {
+) : JsonRpcServerMessage {
     override val success: Boolean
         get() = false
     @Serializable

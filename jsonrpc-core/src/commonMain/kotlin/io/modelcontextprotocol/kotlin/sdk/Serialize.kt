@@ -18,8 +18,8 @@ internal object JsonRpcMessageSerializer :
 }
 
 internal object JsonRpcSendMessageSerializer :
-    JsonContentPolymorphicSerializer<JsonRpcSendMessage>(JsonRpcSendMessage::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcSendMessage> {
+    JsonContentPolymorphicSerializer<JsonRpcClientMessage>(JsonRpcClientMessage::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcClientMessage> {
         val jsonObject = element.jsonObject
         return when {
             jsonObject.contains("id") -> JsonRpcRequest.serializer()
@@ -29,8 +29,8 @@ internal object JsonRpcSendMessageSerializer :
 }
 
 internal object JsonRpcReceiveMessageSerializer :
-    JsonContentPolymorphicSerializer<JsonRpcReceiveMessage>(JsonRpcReceiveMessage::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcReceiveMessage> {
+    JsonContentPolymorphicSerializer<JsonRpcServerMessage>(JsonRpcServerMessage::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcServerMessage> {
         val jsonObject = element.jsonObject
         return when {
             jsonObject.contains("result") -> JsonRpcSuccessResponse.serializer()
