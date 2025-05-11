@@ -17,6 +17,7 @@ fun genKtModules(vararg modules: String) {
 genKtModules(
     "generate-core",
     "jsonrpc-core",
+    "jsonrpc-transport-stdio",
     "mcp-common",
     "mcp-server",
     "mcp-client",
