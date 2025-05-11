@@ -4,11 +4,11 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.io.Sink
 import kotlinx.io.Source
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 
 public data class JsonTransport(
-    public val sendChannel: SendChannel<JsonObject>,
-    public val receiveChannel: ReceiveChannel<JsonObject>
+    public val sendChannel: SendChannel<JsonElement>,
+    public val receiveChannel: ReceiveChannel<JsonElement>
 )
 
 public data class ByteTransport(
