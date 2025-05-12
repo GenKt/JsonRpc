@@ -6,13 +6,12 @@ import kotlinx.coroutines.flow.cancellable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.coroutineContext
 
 public fun CoroutineScope.JsonRpcServer(
     transport: JsonRpcServerTransport,
     onRequest: suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage,
     onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
-    errorHandler: suspend (Throwable) -> Unit = defaultErrorHandler
+    errorHandler: suspend CoroutineScope.(Throwable) -> Unit = defaultErrorHandler
 ): JsonRpcServer = JsonRpcServer(
     transport,
     onRequest,
@@ -26,7 +25,7 @@ public class JsonRpcServer(
     private val onRequest: suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage,
     private val onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
     coroutineContext: CoroutineContext = Dispatchers.Default + Job(),
-    private val errorHandler: suspend (Throwable) -> Unit = defaultErrorHandler
+    private val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = defaultErrorHandler
 ) : AutoCloseable {
     private val coroutineScope = CoroutineScope(coroutineContext)
     private val receiveJob = coroutineScope.launch {
@@ -50,7 +49,7 @@ public class JsonRpcServer(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            errorHandler(e)
+            launch { errorHandler(e) }
         }
     }
 
@@ -60,7 +59,7 @@ public class JsonRpcServer(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            errorHandler(e)
+            launch { errorHandler(e) }
             JsonRpcFailResponse(
                 request.id,
                 JsonRpcFailResponse.Error(
@@ -79,10 +78,7 @@ public class JsonRpcServer(
     }
 }
 
-private val defaultErrorHandler: suspend (Throwable) -> Unit = { throwable ->
-    if (throwable is CancellationException) {
-        throw throwable
-    } else {
-        coroutineContext[CoroutineExceptionHandler]?.handleException(coroutineContext, throwable)
-    }
+private val defaultErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = { throwable ->
+    if (throwable is CancellationException) throw throwable
+    else coroutineContext[CoroutineExceptionHandler]?.handleException(coroutineContext, throwable)
 }
