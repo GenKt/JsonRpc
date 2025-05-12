@@ -2,33 +2,29 @@ package io.github.genkt.jsonrpc.server
 
 import io.github.genkt.jsonrpc.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.catch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.jvm.JvmName
 
 public class JsonRpcServer(
     public val transport: JsonRpcServerTransport,
     onRequest: suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage,
-    onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
-    coroutineContext: CoroutineContext = Dispatchers.Default + SupervisorJob(),
+    private val onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
+    coroutineContext: CoroutineContext = Dispatchers.Default + Job(),
 ) : AutoCloseable {
     private val onRequest = onRequest.safeHandler()
-    private val onNotification = onNotification.safeHandler()
     private val coroutineScope = CoroutineScope(coroutineContext)
     private val receiveJob = coroutineScope.launch {
         transport.receiveFlow
-            .catch { coroutineContext.handleException(it) }
-            .collect { handleMessage(it) }
+            .collect { handleMessageSafe(it) }
     }
 
-    private fun CoroutineScope.handleMessage(request: JsonRpcClientMessage) {
+    private fun CoroutineScope.handleMessageSafe(request: JsonRpcClientMessage) {
         launch(receiveJob) {
             when (request) {
                 is JsonRpcRequest -> transport.sendChannel.send(onRequest(request))
                 is JsonRpcNotification -> onNotification(request)
-                is JsonRpcClientMessageBatch -> request.messages.forEach { handleMessage(it) }
+                is JsonRpcClientMessageBatch -> request.messages.forEach { handleMessageSafe(it) }
             }
         }
     }
@@ -39,13 +35,6 @@ public class JsonRpcServer(
     }
 }
 
-private fun CoroutineContext.handleException(
-    exception: Throwable,
-) {
-    this[CoroutineExceptionHandler]?.handleException(this, exception)
-}
-
-@JvmName("safeHandler\$JsonRpcRequest")
 private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).safeHandler():
         (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage) {
     return { request ->
@@ -54,7 +43,6 @@ private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).sa
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            currentCoroutineContext().handleException(e)
             JsonRpcFailResponse(
                 id = request.id,
                 error = JsonRpcFailResponse.Error(
@@ -63,20 +51,6 @@ private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).sa
                     data = JsonPrimitive(e.stackTraceToString())
                 )
             )
-        }
-    }
-}
-
-@JvmName("safeHandler\$JsonRpcNotification")
-private fun (suspend CoroutineScope.(JsonRpcNotification) -> Unit).safeHandler():
-        (suspend CoroutineScope.(JsonRpcNotification) -> Unit) {
-    return { notification ->
-        try {
-            this.this@safeHandler(notification)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            currentCoroutineContext().handleException(e)
         }
     }
 }
