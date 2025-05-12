@@ -11,11 +11,21 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+public fun CoroutineScope.JsonRpcClient(
+    transport: JsonRpcClientTransport,
+    timeOut: Duration = 10.seconds
+): JsonRpcClient = JsonRpcClient(
+    transport,
+    timeOut,
+    coroutineContext
+)
+
 public class JsonRpcClient(
     public val transport: JsonRpcClientTransport,
     public val timeOut: Duration = 10.seconds,
     coroutineContext: CoroutineContext = Dispatchers.Default + Job(),
 ) : AutoCloseable {
+    private val coroutineScope = CoroutineScope(coroutineContext)
     private val requestMapMutex = Mutex()
     private val requestMap = HashMap<RequestId, Continuation<JsonRpcSuccessResponse>>()
     private suspend fun handleResponse(response: JsonRpcServerMessage) {
@@ -36,7 +46,7 @@ public class JsonRpcClient(
         }.resumeWith(result)
     }
 
-    private val receiveJob = CoroutineScope(coroutineContext).launch {
+    private val receiveJob = coroutineScope.launch {
         transport.receiveFlow
             .collect { handleResponse(it) }
     }
@@ -57,7 +67,7 @@ public class JsonRpcClient(
     }
 
     override fun close() {
-        receiveJob.cancel()
+        coroutineScope.cancel()
         transport.close()
     }
 }
