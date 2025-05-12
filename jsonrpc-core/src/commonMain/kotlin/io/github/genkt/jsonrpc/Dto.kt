@@ -56,14 +56,14 @@ public data class JsonRpcNotification(
 ) : JsonRpcClientSingleMessage
 
 @Serializable
-public class JsonRpcSuccessResponse(
+public data class JsonRpcSuccessResponse(
     public override val id: RequestId,
     public override val jsonrpc: String = JsonRpc.VERSION,
     public val result: JsonElement,
 ) : JsonRpcServerSingleMessage
 
 @Serializable
-public class JsonRpcFailResponse(
+public data class JsonRpcFailResponse(
     public override val id: RequestId,
     public val error: Error,
     public override val jsonrpc: String = JsonRpc.VERSION,
