@@ -10,6 +10,10 @@ public interface Transport<in Input, out Output> : AutoCloseable {
     public val receiveFlow: Flow<Output>
 }
 
+public interface SharedTransport<in Input, out Output> : Transport<Input, Output> {
+    public override val receiveFlow: SharedFlow<Output>
+}
+
 public fun <Input, Output> Transport(
     sendChannel: SendChannel<Input>,
     receiveFlow: Flow<Output>,
@@ -21,12 +25,23 @@ public fun <Input, Output> Transport(
         onClose = onClose
     )
 
+public fun <Input, Output> SharedTransport(
+    sendChannel: SendChannel<Input>,
+    receiveFlow: SharedFlow<Output>,
+    onClose: () -> Unit = {},
+): SharedTransport<Input, Output> =
+    SharedTransportImpl(
+        sendChannel = sendChannel,
+        receiveFlow = receiveFlow,
+        onClose = onClose
+    )
+
 public fun <Input, Output> Transport<Input, Output>.sharedIn(
     scope: CoroutineScope,
     started: SharingStarted = SharingStarted.Lazily,
     replay: Int = 0,
-): Transport<Input, Output> =
-    Transport(
+): SharedTransport<Input, Output> =
+    SharedTransport(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.shareIn(scope, started, replay),
         onClose = this::close
