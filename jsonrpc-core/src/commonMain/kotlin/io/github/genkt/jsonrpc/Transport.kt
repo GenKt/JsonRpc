@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.JsonElement
 
-public interface Transport<Input, Output> : AutoCloseable {
+public interface Transport<in Input, out Output> : AutoCloseable {
     public val sendChannel: SendChannel<Input>
     public val receiveFlow: Flow<Output>
 }

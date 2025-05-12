@@ -4,7 +4,7 @@ import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 
-internal data class TransportImpl<Input, Output>(
+internal data class TransportImpl<in Input, out Output>(
     override val sendChannel: SendChannel<Input>,
     override val receiveFlow: Flow<Output>,
     private val onClose: () -> Unit = {},
