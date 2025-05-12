@@ -4,7 +4,7 @@ plugins {
 
 kotlin {
     sourceSets {
-        commonTest {
+        all {
             dependencies {
                 implementation(project(":genkt-jsonrpc-client"))
                 implementation(project(":genkt-jsonrpc-server"))
