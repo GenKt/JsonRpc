@@ -3,6 +3,8 @@ package io.github.genkt.jsonrpc.test
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.*
@@ -92,8 +94,7 @@ class InMemoryTransportTest {
             }
 
             // Receive messages on transport2
-            val received1 = transport2.receiveFlow.first()
-            val received2 = transport2.receiveFlow.first()
+            val (received1, received2) = transport2.receiveFlow.take(2).toList()
 
             // Verify at least some messages were received
             // Note: With a buffer size of 2 and DROP_OLDEST overflow strategy,
