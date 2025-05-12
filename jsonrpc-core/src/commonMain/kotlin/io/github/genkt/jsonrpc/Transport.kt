@@ -1,8 +1,11 @@
 package io.github.genkt.jsonrpc
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 
 public interface Transport<in Input, out Output> : AutoCloseable {
@@ -52,6 +55,24 @@ public fun <T, R> SendChannel<R>.delegateInput(transform: (T) -> R): SendChannel
         delegate = this,
         transform = transform
     )
+
+public fun <T, R> SendChannel<R>.forwarded(
+    coroutineScope: CoroutineScope,
+    write: (Flow<T>) -> Flow<R>,
+): SendChannel<T> {
+    val targetChannel = this
+    val inputChannel = Channel<T>()
+    val forwardingJob = coroutineScope.launch {
+        inputChannel.consumeAsFlow()
+            .let(write)
+            .collect { targetChannel.send(it) }
+    }
+    targetChannel.invokeOnClose {
+        inputChannel.close(it)
+        forwardingJob.cancel()
+    }
+    return inputChannel
+}
 
 public typealias JsonTransport = Transport<JsonElement, JsonElement>
 public typealias StringTransport = Transport<String, String>
@@ -104,9 +125,13 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
         this::close
     )
 
-public fun StringTransport.asJsonTransport(parse: (Flow<String>) -> Flow<String> = { it }): JsonTransport =
+public fun StringTransport.asJsonTransport(
+    parse: (Flow<String>) -> Flow<String> = { it },
+    write: (Flow<String>) -> Flow<String> = { it },
+): JsonTransport =
     Transport(
-        sendChannel = sendChannel.delegateInput { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
+        sendChannel = sendChannel.forwarded(CoroutineScope(Dispatchers.Default), write)
+            .delegateInput { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
         receiveFlow = parse(receiveFlow).map { JsonRpc.json.parseToJsonElement(it) },
         onClose = this::close
     )
