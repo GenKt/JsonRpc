@@ -16,6 +16,7 @@ fun genKtModules(vararg modules: String) {
 
 genKtModules(
     "generate-core",
+    "serialization-json",
     "jsonrpc-core",
     "jsonrpc-client",
     "jsonrpc-server",
