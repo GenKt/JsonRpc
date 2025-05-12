@@ -5,6 +5,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
@@ -58,6 +60,36 @@ public class JsonRpcClient(
 
     public suspend fun send(notification: JsonRpcNotification) {
         transport.sendChannel.send(notification)
+    }
+
+    public suspend fun sendRequest(
+        id: RequestId,
+        method: String,
+        params: JsonElement? = null,
+        jsonrpc: String = JsonRpc.VERSION,
+    ) {
+        send(
+            JsonRpcRequest(
+                id = id,
+                method = method,
+                params = params ?: JsonNull,
+                jsonrpc = jsonrpc,
+            )
+        )
+    }
+
+    public suspend fun sendNotification(
+        method: String,
+        params: JsonElement? = null,
+        jsonrpc: String = JsonRpc.VERSION,
+    ) {
+        send(
+            JsonRpcNotification(
+                method = method,
+                params = params ?: JsonNull,
+                jsonrpc = jsonrpc,
+            )
+        )
     }
 
     override fun close() {
