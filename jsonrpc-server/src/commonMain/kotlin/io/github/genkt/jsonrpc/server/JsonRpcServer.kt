@@ -69,7 +69,7 @@ public class JsonRpcServer(
                 )
             )
         }
-        transport.sendChannel.send(response)
+        launch { transport.sendChannel.send(response) }
     }
 
     override fun close() {
