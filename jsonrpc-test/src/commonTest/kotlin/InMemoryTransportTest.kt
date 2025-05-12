@@ -7,16 +7,16 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import kotlin.test.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class InMemoryTransportTest {
     @Test
     fun `test in-memory transport can send and receive messages`() = runTest {
         withContext(Dispatchers.Default) {
             // Create a pair of transports
-            val transportPair = InMemoryTransport()
-            val transport1 = transportPair.first
-            val transport2 = transportPair.second
+            val (transport1, transport2) = InMemoryTransport()
 
             // Send a message from transport1 to transport2
             val message = "Hello, transport2!"
