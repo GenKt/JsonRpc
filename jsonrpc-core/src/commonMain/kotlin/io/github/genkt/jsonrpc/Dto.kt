@@ -16,10 +16,17 @@ public sealed interface JsonRpcClientMessage : JsonRpcMessage
 public sealed interface JsonRpcServerMessage : JsonRpcMessage
 
 @Serializable(with = JsonRpcClientSingleMessageSerializer::class)
-public sealed interface JsonRpcClientSingleMessage : JsonRpcClientMessage
+public sealed interface JsonRpcClientSingleMessage : JsonRpcClientMessage {
+    public val method: String
+    public val params: JsonElement
+    public val jsonrpc: String
+}
 
 @Serializable(with = JsonRpcServerSingleMessageSerializer::class)
-public sealed interface JsonRpcServerSingleMessage : JsonRpcServerMessage
+public sealed interface JsonRpcServerSingleMessage : JsonRpcServerMessage {
+    public val id: RequestId
+    public val jsonrpc: String
+}
 
 @Serializable
 @JvmInline
@@ -36,30 +43,30 @@ public value class JsonRpcClientMessageBatch(
 @Serializable
 public data class JsonRpcRequest(
     public val id: RequestId,
-    public val method: String,
-    public val params: JsonElement = JsonObject.Empty,
-    public val jsonrpc: String = JsonRpc.VERSION,
+    public override val method: String,
+    public override val params: JsonElement = JsonObject.Empty,
+    public override val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientSingleMessage
 
 @Serializable
 public data class JsonRpcNotification(
-    public val method: String,
-    public val params: JsonElement = JsonObject.Empty,
-    public val jsonrpc: String = JsonRpc.VERSION,
+    public override val method: String,
+    public override val params: JsonElement = JsonObject.Empty,
+    public override val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientSingleMessage
 
 @Serializable
 public class JsonRpcSuccessResponse(
-    public val id: RequestId,
-    public val jsonrpc: String = JsonRpc.VERSION,
+    public override val id: RequestId,
+    public override val jsonrpc: String = JsonRpc.VERSION,
     public val result: JsonElement,
 ) : JsonRpcServerSingleMessage
 
 @Serializable
 public class JsonRpcFailResponse(
-    public val id: RequestId,
+    public override val id: RequestId,
     public val error: Error,
-    public val jsonrpc: String = JsonRpc.VERSION,
+    public override val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcServerSingleMessage {
     @Serializable
     public data class Error(
