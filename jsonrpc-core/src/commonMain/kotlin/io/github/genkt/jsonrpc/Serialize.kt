@@ -16,9 +16,8 @@ internal object JsonRpcMessageSerializer :
         }
         val jsonObject = element.jsonObject
         return when {
-            !jsonObject.contains("method") -> JsonRpcSuccessResponse.serializer()
-            jsonObject.contains("id") -> JsonRpcRequest.serializer()
-            else -> JsonRpcNotification.serializer()
+            jsonObject.contains("method") -> JsonRpcClientSingleMessageSerializer
+            else -> JsonRpcServerSingleMessageSerializer
         }
     }
 }
