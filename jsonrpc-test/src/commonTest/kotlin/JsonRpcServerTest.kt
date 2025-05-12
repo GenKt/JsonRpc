@@ -3,6 +3,8 @@ package io.github.genkt.jsonrpc.test
 import io.github.genkt.jsonrpc.*
 import io.github.genkt.jsonrpc.server.JsonRpcServer
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -21,18 +23,26 @@ class JsonRpcServerTest {
             // Create client and server transports
             val clientTransport = transportPair.first.asJsonTransport().asJsonRpcClientTransport()
             val serverTransport = transportPair.second.asJsonTransport().asJsonRpcServerTransport()
-            
+
+            val deferredException = CompletableDeferred<Throwable>()
+
             // Create a server
             val server = JsonRpcServer(
                 transport = serverTransport,
                 onRequest = { request ->
                     // Echo the method name in the result
+                    if (request.params == JsonNull) {
+                        throw IllegalArgumentException("Params cannot be null")
+                    }
                     JsonRpcSuccessResponse(
                         id = request.id,
                         result = JsonPrimitive("Method: ${request.method}")
                     )
                 },
-                onNotification = { }
+                onNotification = { },
+                coroutineContext = CoroutineExceptionHandler { _, throwable ->
+                    deferredException.complete(throwable)
+                }
             )
             
             // Send a request from the client side
@@ -49,6 +59,20 @@ class JsonRpcServerTest {
             assertTrue(response is JsonRpcSuccessResponse)
             assertEquals(request.id, (response as JsonRpcSuccessResponse).id)
             assertEquals("Method: test", response.result.jsonPrimitive.content)
+
+            // Send a request with null params
+            clientTransport.sendChannel.send(
+                JsonRpcRequest(
+                    id = RequestId.NumberId(2),
+                    method = "test",
+                    params = JsonNull
+                )
+            )
+            // Wait for the server to process the request
+            delay(100)
+            // Verify the exception was thrown
+            assertTrue { deferredException.isCompleted }
+            assertTrue { deferredException.await() is IllegalArgumentException }
             
             // Clean up
             server.close()
@@ -67,19 +91,28 @@ class JsonRpcServerTest {
             
             // Track received notifications
             val receivedNotifications = mutableListOf<JsonRpcNotification>()
+
+            val deferredException = CompletableDeferred<Throwable>()
             
             // Create a server
             val server = JsonRpcServer(
                 transport = serverTransport,
                 onRequest = { request ->
+                    if (request.params == JsonNull) {
+                        throw IllegalArgumentException("Params cannot be null")
+                    }
                     JsonRpcSuccessResponse(
                         id = request.id,
                         result = JsonNull
                     )
                 },
                 onNotification = { notification ->
+                    if (notification.params == JsonNull) {
+                        throw IllegalArgumentException("Params cannot be null")
+                    }
                     receivedNotifications.add(notification)
-                }
+                },
+                coroutineContext = CoroutineExceptionHandler { _,throwable -> deferredException.complete(throwable) }
             )
             
             // Send a notification from the client side
@@ -98,7 +131,20 @@ class JsonRpcServerTest {
             assertEquals(1, receivedNotifications.size)
             assertEquals("notify", receivedNotifications[0].method)
             assertEquals("event", receivedNotifications[0].params.jsonObject["type"]?.jsonPrimitive?.content)
-            
+
+            clientTransport.sendChannel.send(
+                JsonRpcNotification(
+                    method = "notify",
+                    params = JsonNull
+                )
+            )
+
+            // Wait for the server to process the notification
+            delay(100)
+
+            // Verify the notification was received
+            assertTrue { deferredException.isCompleted }
+            assertTrue { deferredException.await() is IllegalArgumentException }
             // Clean up
             server.close()
         }
