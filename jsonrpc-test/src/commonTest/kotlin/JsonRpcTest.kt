@@ -3,6 +3,7 @@ package io.github.genkt.jsonrpc.test
 import io.github.genkt.jsonprc.client.JsonRpcClient
 import io.github.genkt.jsonrpc.*
 import io.github.genkt.jsonrpc.server.JsonRpcServer
+import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest

@@ -21,6 +21,7 @@ genKtModules(
     "jsonrpc-server",
     "jsonrpc-test",
     "jsonrpc-transport-stdio",
+    "jsonrpc-transport-memory",
     "mcp-common",
     "mcp-server",
     "mcp-client",

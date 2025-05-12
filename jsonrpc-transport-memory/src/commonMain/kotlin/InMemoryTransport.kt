@@ -1,6 +1,7 @@
-package io.github.genkt.jsonrpc.test
+package io.github.genkt.jsonrpc.transport.memory
 
-import io.github.genkt.jsonrpc.*
+import io.github.genkt.jsonrpc.StringTransport
+import io.github.genkt.jsonrpc.Transport
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
