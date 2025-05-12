@@ -67,6 +67,7 @@ internal object RequestIdSerializer :
         val jsonPrimitive = element.jsonPrimitive
         return when {
             jsonPrimitive.isString -> RequestId.StringId.serializer()
+            jsonPrimitive is JsonNull -> NullIdSerializer
             else -> RequestId.NumberId.serializer()
         }
     }
