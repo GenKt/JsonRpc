@@ -7,6 +7,7 @@ import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -28,7 +29,7 @@ class JsonRpcClientTest {
             val client = JsonRpcClient(clientTransport)
 
             // Start a coroutine to handle server-side messages
-            val serverJob = withContext(Dispatchers.Default) {
+            val serverJob = launch {
                 // Listen for requests on the server transport
                 val request = serverTransport.receiveFlow.first()
                 assertTrue(request is JsonRpcRequest)
@@ -76,7 +77,7 @@ class JsonRpcClientTest {
             val client = JsonRpcClient(clientTransport)
 
             // Start a coroutine to handle server-side messages
-            val serverJob = withContext(Dispatchers.Default) {
+            val serverJob = launch {
                 // Listen for notifications on the server transport
                 val notification = serverTransport.receiveFlow.first()
                 assertTrue(notification is JsonRpcNotification)
@@ -145,7 +146,7 @@ class JsonRpcClientTest {
             val client = JsonRpcClient(clientTransport)
 
             // Start a coroutine to handle server-side messages
-            val serverJob = withContext(Dispatchers.Default) {
+            val serverJob = launch {
                 // Listen for requests on the server transport
                 val request = serverTransport.receiveFlow.first()
                 assertTrue(request is JsonRpcRequest)
@@ -190,7 +191,7 @@ class JsonRpcClientTest {
             val client = JsonRpcClient(clientTransport)
 
             // Start a coroutine to handle server-side messages
-            val serverJob = withContext(Dispatchers.Default) {
+            val serverJob = launch {
                 // Listen for notifications on the server transport
                 val notification = serverTransport.receiveFlow.first()
                 assertTrue(notification is JsonRpcNotification)
