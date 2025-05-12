@@ -11,11 +11,13 @@ import kotlinx.serialization.json.JsonElement
 
 public class JsonPolymorphicSerializer<T>(
     public override val descriptor: SerialDescriptor,
-    public val selectSerializer: (T) -> SerializationStrategy<T>,
+    public val selectSerializer: (T) -> SerializationStrategy<*>,
     public val selectDeserializer: (JsonElement) -> DeserializationStrategy<T>,
 ) : KSerializer<T> {
+    @Suppress("unchecked_cast")
     override fun serialize(encoder: Encoder, value: T) {
-        selectSerializer(value).serialize(encoder, value)
+        val serializer = selectSerializer(value) as SerializationStrategy<T>
+        serializer.serialize(encoder, value)
     }
 
     override fun deserialize(decoder: Decoder): T {
