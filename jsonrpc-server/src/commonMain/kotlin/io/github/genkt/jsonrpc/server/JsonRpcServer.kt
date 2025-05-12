@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.jvm.JvmName
 
 public class JsonRpcServer(
     public val transport: JsonRpcServerTransport,
@@ -44,6 +45,7 @@ private fun CoroutineContext.handleException(
     this[CoroutineExceptionHandler]?.handleException(this, exception)
 }
 
+@JvmName("safeHandler\$JsonRpcRequest")
 private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).safeHandler():
         (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage) {
     return { request ->
@@ -65,6 +67,7 @@ private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).sa
     }
 }
 
+@JvmName("safeHandler\$JsonRpcNotification")
 private fun (suspend CoroutineScope.(JsonRpcNotification) -> Unit).safeHandler():
         (suspend CoroutineScope.(JsonRpcNotification) -> Unit) {
     return { notification ->
