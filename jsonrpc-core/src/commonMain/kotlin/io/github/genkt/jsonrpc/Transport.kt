@@ -83,7 +83,7 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
         }
     )
 
-public fun StringTransport.asJsonTransport(parse: (Flow<String>) -> Flow<String>): JsonTransport {
+public fun StringTransport.asJsonTransport(parse: (Flow<String>) -> Flow<String> = { it }): JsonTransport {
     return TransportImpl(
         sendChannel = sendChannel.mapFrom { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
         receiveFlow = parse(receiveFlow).map { JsonRpc.json.parseToJsonElement(it) },
