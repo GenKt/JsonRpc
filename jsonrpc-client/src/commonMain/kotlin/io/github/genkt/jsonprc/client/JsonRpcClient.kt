@@ -67,8 +67,8 @@ public class JsonRpcClient(
         method: String,
         params: JsonElement? = null,
         jsonrpc: String = JsonRpc.VERSION,
-    ) {
-        send(
+    ): JsonRpcSuccessResponse {
+        return send(
             JsonRpcRequest(
                 id = id,
                 method = method,
