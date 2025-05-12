@@ -1,13 +1,20 @@
 package io.github.genkt.jsonrpc.test
 
 import io.github.genkt.jsonrpc.*
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
 
 @Suppress("FunctionName")
-public fun InMemoryTransport(): Pair<StringTransport, StringTransport> {
-    val channel1To2 = Channel<String>()
-    val channel2To1 = Channel<String>()
+public fun InMemoryTransport(bufferSize: Int = 128): Pair<StringTransport, StringTransport> {
+    val channel1To2 = Channel<String>(
+        bufferSize,
+        BufferOverflow.DROP_OLDEST,
+    )
+    val channel2To1 = Channel<String>(
+        bufferSize,
+        BufferOverflow.DROP_OLDEST,
+    )
 
     val onClose: () -> Unit = {
         channel1To2.close()
