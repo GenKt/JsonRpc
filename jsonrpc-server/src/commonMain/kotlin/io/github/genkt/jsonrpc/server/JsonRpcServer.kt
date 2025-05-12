@@ -3,14 +3,18 @@ package io.github.genkt.jsonrpc.server
 import io.github.genkt.jsonrpc.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.catch
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
 
 public class JsonRpcServer(
     public val transport: JsonRpcServerTransport,
-    public val onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
-    public val onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
-    public val coroutineContext: CoroutineContext = Dispatchers.Default + SupervisorJob(),
+    onRequest: suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage,
+    onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
+    coroutineContext: CoroutineContext = Dispatchers.Default + SupervisorJob(),
 ) : AutoCloseable {
+    private val onRequest = onRequest.safeHandler()
+    private val onNotification = onNotification.safeHandler()
     private val coroutineScope = CoroutineScope(coroutineContext)
     private val receiveJob = coroutineScope.launch {
         transport.receiveFlow
@@ -38,4 +42,38 @@ private fun CoroutineContext.handleException(
     exception: Throwable,
 ) {
     this[CoroutineExceptionHandler]?.handleException(this, exception)
+}
+
+private fun (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage).safeHandler():
+        (suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage) {
+    return { request ->
+        try {
+            this.this@safeHandler(request)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            currentCoroutineContext().handleException(e)
+            JsonRpcFailResponse(
+                id = request.id,
+                error = JsonRpcFailResponse.Error(
+                    code = JsonRpcFailResponse.Error.Code.InternalError,
+                    message = e.message ?: "Internal error",
+                    data = JsonPrimitive(e.stackTraceToString())
+                )
+            )
+        }
+    }
+}
+
+private fun (suspend CoroutineScope.(JsonRpcNotification) -> Unit).safeHandler():
+        (suspend CoroutineScope.(JsonRpcNotification) -> Unit) {
+    return { notification ->
+        try {
+            this.this@safeHandler(notification)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            currentCoroutineContext().handleException(e)
+        }
+    }
 }
