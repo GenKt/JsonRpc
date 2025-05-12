@@ -4,12 +4,6 @@ import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 
-internal data class DelegatingTransport<Input, Output>(
-    override val sendChannel: SendChannel<Input>,
-    override val receiveFlow: Flow<Output>,
-    val delegate: Transport<*, *>,
-) : Transport<Input, Output>, AutoCloseable by delegate
-
 internal data class TransportImpl<Input, Output>(
     override val sendChannel: SendChannel<Input>,
     override val receiveFlow: Flow<Output>,
