@@ -8,12 +8,13 @@ import kotlinx.serialization.json.*
 internal object JsonRpcMessageSerializer :
     JsonContentPolymorphicSerializer<JsonRpcMessage>(JsonRpcMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<JsonRpcMessage> {
-        val jsonObject = if (element is JsonArray) {
+        if (element is JsonArray) {
             if (element.isEmpty())
                 return JsonRpcClientMessageBatch.serializer()
-            else
-                element.first().jsonObject
-        } else element.jsonObject
+            return if (element.first().jsonObject.contains("method")) JsonRpcClientMessageBatch.serializer()
+            else JsonRpcServerMessageBatch.serializer()
+        }
+        val jsonObject = element.jsonObject
         return when {
             !jsonObject.contains("method") -> JsonRpcSuccessResponse.serializer()
             jsonObject.contains("id") -> JsonRpcRequest.serializer()
@@ -67,6 +68,7 @@ internal object RequestIdSerializer :
         val jsonPrimitive = element.jsonPrimitive
         return when {
             jsonPrimitive.isString -> RequestId.StringId.serializer()
+            jsonPrimitive is JsonNull -> NullIdSerializer
             else -> RequestId.NumberId.serializer()
         }
     }
