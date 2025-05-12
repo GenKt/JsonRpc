@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.1.10"
+kotlin-coroutines = "1.10.2"
 ksp = "2.1.10-2.0.1"
 atomicfu = "0.26.1"
 kotlinx-serialization = "1.8.1"
@@ -17,6 +18,7 @@ maven-publish-plugin = { module = "com.vanniktech.maven.publish:com.vanniktech.m
 kotlin-multiplatform-plugin = { module = "org.jetbrains.kotlin.multiplatform:org.jetbrains.kotlin.multiplatform.gradle.plugin", version.ref = "kotlin" }
 kotlin-jvm-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 json-schema-generator = { module = "io.github.stream29:json-schema-generator", version.ref = "json-schema-generator" }

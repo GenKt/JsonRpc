@@ -13,6 +13,7 @@ kotlin {
             dependencies {
                 implementation(project(":genkt-jsonrpc-client"))
                 implementation(project(":genkt-jsonrpc-server"))
+                implementation(libs.kotlin.coroutines.test)
                 implementation(libs.kotlin.test)
             }
         }
