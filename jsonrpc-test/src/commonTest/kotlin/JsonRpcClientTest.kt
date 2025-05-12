@@ -2,6 +2,8 @@ package io.github.genkt.jsonrpc.test
 
 import io.github.genkt.jsonprc.client.JsonRpcClient
 import io.github.genkt.jsonprc.client.JsonRpcTimeoutException
+import io.github.genkt.jsonprc.client.sendNotification
+import io.github.genkt.jsonprc.client.sendRequest
 import io.github.genkt.jsonrpc.*
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.Dispatchers
