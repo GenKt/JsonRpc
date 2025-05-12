@@ -12,8 +12,6 @@ mavenPublishing {
     signAllPublications()
     coordinates((group as String), name, version.toString())
     pom {
-        name.set("GenKt")
-        description.set("GenAI SDK for Kotlin Multiplatform")
         url.set("https://github.com/GenKt/GenKt")
         licenses {
             license {
