@@ -18,7 +18,7 @@ public sealed interface JsonRpcServerMessage : JsonRpcMessage
 @Serializable(with = JsonRpcClientSingleMessageSerializer::class)
 public sealed interface JsonRpcClientSingleMessage : JsonRpcClientMessage {
     public val method: String
-    public val params: JsonElement
+    public val params: JsonElement?
     public val jsonrpc: String
 }
 
@@ -44,14 +44,14 @@ public value class JsonRpcClientMessageBatch(
 public data class JsonRpcRequest(
     public val id: RequestId,
     public override val method: String,
-    public override val params: JsonElement = JsonObject.Empty,
+    public override val params: JsonElement? = null,
     public override val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientSingleMessage
 
 @Serializable
 public data class JsonRpcNotification(
     public override val method: String,
-    public override val params: JsonElement = JsonObject.Empty,
+    public override val params: JsonElement? = null,
     public override val jsonrpc: String = JsonRpc.VERSION,
 ) : JsonRpcClientSingleMessage
 
