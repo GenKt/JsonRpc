@@ -3,18 +3,21 @@ package io.github.genkt.jsonrpc.test
 import io.github.genkt.jsonprc.client.JsonRpcClient
 import io.github.genkt.jsonrpc.*
 import io.github.genkt.jsonrpc.server.JsonRpcServer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import kotlin.test.*
-import kotlin.time.Duration.Companion.minutes
 
 class JsonRpcTest {
     val transportPair = InMemoryTransport()
 
     val client = JsonRpcClient(
         transportPair.first.asJsonTransport().asJsonRpcClientTransport(),
-        timeOut = 1.minutes,
     )
+
+    val notifications = mutableListOf<JsonRpcNotification>()
 
     val server = JsonRpcServer(
         transportPair.second.asJsonTransport().asJsonRpcServerTransport(),
@@ -37,19 +40,44 @@ class JsonRpcTest {
             }
         },
         {
-            null
+            notifications.add(it)
         }
     )
 
     @Test
     fun `should call echo method with correct params`() = runTest {
-        val response = client.sendRequest(
-            RequestId.NumberId(1),
-            "echo",
-            buildJsonObject {
-                put("name", "World")
-            }
-        )
-        assertEquals("Hello, World!", response.result.jsonPrimitive.content)
+        withContext(Dispatchers.Default) {
+            val response = client.sendRequest(
+                RequestId.NumberId(1),
+                "echo",
+                buildJsonObject {
+                    put("name", "World")
+                }
+            )
+            assertEquals("Hello, World!", response.result.jsonPrimitive.content)
+        }
+    }
+
+    @Test
+    fun `should call echo method with incorrect params`() = runTest {
+        withContext(Dispatchers.Default) {
+            val response = client.sendRequest(
+                RequestId.NumberId(1),
+                "echo",
+                buildJsonObject {}
+            )
+            assertEquals("Hello, Mr. Unknown!", response.result.jsonPrimitive.content)
+        }
+    }
+
+    @Test
+    fun `should receive notification`() = runTest {
+        withContext(Dispatchers.Default) {
+            client.sendNotification(
+                method = "notify"
+            )
+            delay(100)
+            assertEquals("notify", notifications.first().method)
+        }
     }
 }
