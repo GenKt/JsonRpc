@@ -1,6 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import kotlin.jvm.JvmInline
 
 public sealed interface McpCompletion {
@@ -40,5 +41,19 @@ public sealed interface McpCompletion {
         public val values: List<String>,
         public val total: Int,
         public val hasMore: Boolean,
+    )
+}
+
+public sealed interface McpLogging {
+    @Serializable
+    public data class SetLevelRequest(
+        public val level: String,
+    )
+
+    @Serializable
+    public data class LogMessage(
+        public val level: String,
+        public val logger: String,
+        public val data: JsonObject,
     )
 }
