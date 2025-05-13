@@ -173,6 +173,39 @@ internal object McpToolResourceContentSerializer :
         toDelegate = { McpResourceContentDelegate(it.uri, it.mimeType, it.text) },
     )
 
+internal object McpCompletionReferenceSerializer :
+    KSerializer<McpCompletion.Reference> by JsonPolymorphicSerializer(
+        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpCompletion.Reference", PolymorphicKind.SEALED),
+        {
+            when (it) {
+                is McpCompletion.Reference.Prompt -> McpCompletionPromptReferenceSerializer
+                is McpCompletion.Reference.Resource -> McpCompletionResourceReferenceSerializer
+                else -> error("Unknown type: $it")
+            }
+        },
+        {
+            when (it.jsonObject["type"]?.jsonPrimitive?.content) {
+                "ref/prompt" -> McpCompletionPromptReferenceSerializer
+                "ref/resource" -> McpCompletionResourceReferenceSerializer
+                else -> error("Unknown type: $it")
+            }
+        }
+    )
+
+internal object McpCompletionPromptReferenceSerializer :
+    KSerializer<McpCompletion.Reference.Prompt> by DelegatingSerializer(
+        delegate = McpPromptReferenceDelegate.serializer(),
+        fromDelegate = { McpCompletion.Reference.Prompt(it.name) },
+        toDelegate = { McpPromptReferenceDelegate(name = it.name) },
+    )
+
+internal object McpCompletionResourceReferenceSerializer :
+    KSerializer<McpCompletion.Reference.Resource> by DelegatingSerializer(
+        delegate = McpResourceReferenceDelegate.serializer(),
+        fromDelegate = { McpCompletion.Reference.Resource(it.uri) },
+        toDelegate = { McpResourceReferenceDelegate(uri = it.uri) },
+    )
+
 @Serializable
 internal data class McpTextContentDelegate(
     val type: String = "text",
@@ -213,3 +246,15 @@ internal data class McpResourceContentDelegate(
         val text: String,
     )
 }
+
+@Serializable
+internal data class McpPromptReferenceDelegate(
+    val type: String = "ref/prompt",
+    val name: String,
+)
+
+@Serializable
+internal data class McpResourceReferenceDelegate(
+    val type: String = "ref/resource",
+    val uri: String,
+)
