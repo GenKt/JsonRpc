@@ -194,13 +194,13 @@ public data class EmptyRequestResult(
 /**
  * A uniquely identifying ID for a request in JSON-RPC.
  */
-@Serializable(with = RequestIdSerializer::class)
+@Serializable(with = io.modelcontextprotocol.kotlin.sdk.RequestIdSerializer::class)
 public sealed interface RequestId {
     @Serializable
-    public data class StringId(val value: String) : RequestId
+    public data class StringId(val value: String) : io.modelcontextprotocol.kotlin.sdk.RequestId
 
     @Serializable
-    public data class NumberId(val value: Long) : RequestId
+    public data class NumberId(val value: Long) : io.modelcontextprotocol.kotlin.sdk.RequestId
 }
 
 /**

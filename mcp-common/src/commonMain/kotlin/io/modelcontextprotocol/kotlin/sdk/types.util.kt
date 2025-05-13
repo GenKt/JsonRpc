@@ -290,6 +290,7 @@ public class RequestIdSerializer : KSerializer<RequestId> {
         when (value) {
             is RequestId.StringId -> jsonEncoder.encodeString(value.value)
             is RequestId.NumberId -> jsonEncoder.encodeLong(value.value)
+            RequestId.NullId -> TODO()
         }
     }
 }
