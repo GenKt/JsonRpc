@@ -4,10 +4,7 @@ package io.github.genkt.mcp.common.dto
 
 import io.github.genkt.serialization.json.JsonPolymorphicSerializer
 import io.github.stream29.streamlin.DelegatingSerializer
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.InternalSerializationApi
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.json.*
@@ -72,6 +69,27 @@ internal object McpPromptContentSerializer :
                 "audio" -> McpPromptAudioContentSerializer
                 "resource" -> McpPromptResourceContentSerializer
                 else -> error("Unknown type: $it")
+            }
+        }
+    )
+
+internal object McpResourceContentSerializer :
+    KSerializer<McpResource.Content> by JsonPolymorphicSerializer(
+        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpResource.Content", PolymorphicKind.SEALED),
+        {
+            when (it) {
+                is McpResource.Content.Text -> McpResource.Content.Text.serializer()
+                is McpResource.Content.Binary -> McpResource.Content.Binary.serializer()
+                else -> error("Unknown type: $it")
+            }
+        },
+        {
+            if (it.jsonObject["text"] != null) {
+                McpResource.Content.Text.serializer()
+            } else if (it.jsonObject["blob"] != null) {
+                McpResource.Content.Binary.serializer()
+            } else {
+                error("Unknown type: $it")
             }
         }
     )

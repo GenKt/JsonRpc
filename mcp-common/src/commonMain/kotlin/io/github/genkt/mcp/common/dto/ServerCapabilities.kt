@@ -98,3 +98,76 @@ public data class McpPrompt(
         ): Content
     }
 }
+
+@Serializable
+public data class McpResource(
+    public val uri: String,
+    public val name: String,
+    public val description: String? = null,
+    public val mimeType: String? = null,
+    public val size: Long? = null,
+) {
+    @Serializable
+    public data class ListRequest(
+        public val cursor: String? = null
+    )
+
+    @Serializable
+    public data class ListResponse(
+        public val resources: List<McpResource>,
+        public val nextCursor: String? = null,
+    )
+
+    @Serializable
+    public data class ReadRequest(
+        public val uri: String,
+    )
+
+    @Serializable
+    public data class ReadResponse(
+        public val contents: List<Content>,
+    )
+
+    @Serializable(with = McpResourceContentSerializer::class)
+    public sealed interface Content {
+        public val uri: String
+        public val mimeType: String
+
+        @Serializable
+        public data class Text(
+            override val uri: String,
+            override val mimeType: String,
+            val text: String,
+        ): Content
+
+        @Serializable
+        public data class Binary(
+            override val uri: String,
+            override val mimeType: String,
+            val blob: String,
+        ): Content
+    }
+
+    @Serializable
+    public data class Template(
+        public val uriTemplate: String,
+        public val name: String,
+        public val description: String,
+        public val mimeType: String,
+    )
+
+    @Serializable
+    public data class ListTemplateResponse(
+        public val resourceTemplates: List<Template>,
+    )
+
+    @Serializable
+    public data class SubscribeRequest(
+        public val uri: String,
+    )
+
+    @Serializable
+    public data class SubscribeNotification(
+        public val uri: String,
+    )
+}
