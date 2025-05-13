@@ -28,6 +28,7 @@ public class JsonRpcClient(
     private val coroutineScope = CoroutineScope(coroutineContext)
     private val requestMapMutex = Mutex()
     private val requestMap = HashMap<RequestId, Continuation<JsonRpcSuccessResponse>>()
+    public var maxNumberId: RequestId.NumberId = RequestId.NumberId(0)
     private suspend fun handleResponse(response: JsonRpcServerMessage) {
         when (response) {
             is JsonRpcSuccessResponse -> resumeById(response, Result.success(response))
@@ -73,7 +74,7 @@ public class JsonRpcClient(
 }
 
 public suspend fun JsonRpcClient.sendRequest(
-    id: RequestId,
+    id: RequestId = RequestId.NumberId(maxNumberId.value + 1),
     method: String,
     params: JsonElement? = null,
     jsonrpc: String = JsonRpc.VERSION,
