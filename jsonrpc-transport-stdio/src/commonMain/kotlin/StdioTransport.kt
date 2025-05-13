@@ -1,7 +1,7 @@
 package io.github.genkt.jsonrpc.transport.stdio
 
-import io.github.genkt.jsonrpc.StringTransport
-import io.github.genkt.jsonrpc.Transport
+import io.genkt.jsonrpc.StringTransport
+import io.genkt.jsonrpc.Transport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach

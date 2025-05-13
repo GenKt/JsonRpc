@@ -2,7 +2,7 @@
 
 package io.modelcontextprotocol.kotlin.sdk
 
-import io.github.genkt.jsonrpc.RequestId
+import io.genkt.jsonrpc.RequestId
 import io.modelcontextprotocol.kotlin.sdk.shared.McpJson
 import kotlinx.atomicfu.AtomicLong
 import kotlinx.atomicfu.atomic

@@ -1,6 +1,6 @@
 package io.modelcontextprotocol.kotlin.sdk
 
-import io.github.genkt.jsonrpc.RequestId
+import io.genkt.jsonrpc.RequestId
 import io.modelcontextprotocol.kotlin.sdk.LoggingMessageNotification.SetLevelRequest
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.KSerializer

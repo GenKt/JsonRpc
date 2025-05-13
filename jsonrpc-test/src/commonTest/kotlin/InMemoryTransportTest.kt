@@ -1,6 +1,6 @@
 package io.github.genkt.jsonrpc.test
 
-import io.github.genkt.jsonrpc.asJsonTransport
+import io.genkt.jsonrpc.asJsonTransport
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
