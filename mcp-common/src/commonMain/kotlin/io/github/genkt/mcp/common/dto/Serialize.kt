@@ -10,7 +10,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.buildSerialDescriptor
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.*
 
 internal object McpSamplingContentSerializer :
     KSerializer<McpSampling.Content> by JsonPolymorphicSerializer(
@@ -35,22 +35,73 @@ internal object McpSamplingContentSerializer :
 internal object McpSamplingTextContentSerializer :
     KSerializer<McpSampling.Content.Text> by DelegatingSerializer(
         delegate = McpTextContentDelegate.serializer(),
-        fromDelegate = { McpSampling.Content.Text(text) },
-        toDelegate = { McpTextContentDelegate(text = text) },
+        fromDelegate = { McpSampling.Content.Text(it.text) },
+        toDelegate = { McpTextContentDelegate(text = it.text) },
     )
 
 internal object McpSamplingImageContentSerializer :
     KSerializer<McpSampling.Content.Image> by DelegatingSerializer(
         delegate = McpImageContentDelegate.serializer(),
-        fromDelegate = { McpSampling.Content.Image(data, mimeType) },
-        toDelegate = { McpImageContentDelegate(data = data, mimeType = mimeType) },
+        fromDelegate = { McpSampling.Content.Image(it.data, it.mimeType) },
+        toDelegate = { McpImageContentDelegate(data = it.data, mimeType = it.mimeType) },
     )
 
 internal object McpSamplingAudioContentSerializer :
     KSerializer<McpSampling.Content.Audio> by DelegatingSerializer(
         delegate = McpAudioContentDelegate.serializer(),
-        fromDelegate = { McpSampling.Content.Audio(data, mimeType) },
-        toDelegate = { McpAudioContentDelegate(data = data, mimeType = mimeType) },
+        fromDelegate = { McpSampling.Content.Audio(it.data, it.mimeType) },
+        toDelegate = { McpAudioContentDelegate(data = it.data, mimeType = it.mimeType) },
+    )
+
+internal object McpPromptContentSerializer :
+    KSerializer<McpPrompt.Content> by JsonPolymorphicSerializer(
+        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpPrompt.Content", PolymorphicKind.SEALED),
+        {
+            when (it) {
+                is McpPrompt.Content.Text -> McpPromptTextContentSerializer
+                is McpPrompt.Content.Image -> McpPromptImageContentSerializer
+                is McpPrompt.Content.Audio -> McpPromptAudioContentSerializer
+                is McpPrompt.Content.Resource -> McpPromptResourceContentSerializer
+                else -> error("Unknown type: $it")
+            }
+        },
+        {
+            when (it.jsonObject["type"]?.jsonPrimitive?.content) {
+                "text" -> McpPromptTextContentSerializer
+                "image" -> McpPromptImageContentSerializer
+                "audio" -> McpPromptAudioContentSerializer
+                "resource" -> McpPromptResourceContentSerializer
+                else -> error("Unknown type: $it")
+            }
+        }
+    )
+
+internal object McpPromptTextContentSerializer :
+    KSerializer<McpPrompt.Content.Text> by DelegatingSerializer(
+        delegate = McpTextContentDelegate.serializer(),
+        fromDelegate = { McpPrompt.Content.Text(it.text) },
+        toDelegate = { McpTextContentDelegate(text = it.text) },
+    )
+
+internal object McpPromptImageContentSerializer :
+    KSerializer<McpPrompt.Content.Image> by DelegatingSerializer(
+        delegate = McpImageContentDelegate.serializer(),
+        fromDelegate = { McpPrompt.Content.Image(it.data, it.mimeType) },
+        toDelegate = { McpImageContentDelegate(data = it.data, mimeType = it.mimeType) },
+    )
+
+internal object McpPromptAudioContentSerializer :
+    KSerializer<McpPrompt.Content.Audio> by DelegatingSerializer(
+        delegate = McpAudioContentDelegate.serializer(),
+        fromDelegate = { McpPrompt.Content.Audio(it.data, it.mimeType) },
+        toDelegate = { McpAudioContentDelegate(data = it.data, mimeType = it.mimeType) },
+    )
+
+internal object McpPromptResourceContentSerializer :
+    KSerializer<McpPrompt.Content.Resource> by DelegatingSerializer(
+        delegate = McpResourceContentDelegate.serializer(),
+        fromDelegate = { McpPrompt.Content.Resource(it.resource.uri, it.resource.mimeType, it.resource.text) },
+        toDelegate = { McpResourceContentDelegate(it.uri, it.mimeType, it.text) },
     )
 
 @Serializable
@@ -72,3 +123,24 @@ internal data class McpAudioContentDelegate(
     val data: String,
     val mimeType: String,
 )
+
+@Serializable
+internal data class McpResourceContentDelegate(
+    val type: String = "resource",
+    val resource: Resource,
+) {
+    constructor(
+        uri: String,
+        mimeType: String,
+        text: String,
+    ) : this(
+        resource = Resource(uri, mimeType, text)
+    )
+
+    @Serializable
+    internal data class Resource(
+        val uri: String,
+        val mimeType: String,
+        val text: String,
+    )
+}
