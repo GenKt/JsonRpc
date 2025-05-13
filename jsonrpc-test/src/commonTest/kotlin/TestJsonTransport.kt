@@ -57,7 +57,6 @@ suspend fun testJsonTransport(
     val client = JsonRpcClient(
         transport = clientTransport,
         timeOut = 100.milliseconds,
-        coroutineContext = SupervisorJob() + Dispatchers.Default
     )
 
     val response = client.sendRequest(
