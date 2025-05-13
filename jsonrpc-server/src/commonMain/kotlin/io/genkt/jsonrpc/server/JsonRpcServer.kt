@@ -23,7 +23,7 @@ public fun CoroutineScope.JsonRpcServer(
     transport,
     onRequest,
     onNotification,
-    coroutineContext,
+    this,
     errorHandler
 )
 
@@ -31,10 +31,9 @@ public class JsonRpcServer(
     public val transport: JsonRpcServerTransport,
     private val onRequest: suspend CoroutineScope.(JsonRpcRequest) -> JsonRpcServerMessage,
     private val onNotification: suspend CoroutineScope.(JsonRpcNotification) -> Unit,
-    coroutineContext: CoroutineContext = Dispatchers.Default + Job(),
+    private val coroutineScope: CoroutineScope = transport.coroutineScope,
     private val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = defaultErrorHandler
 ) : AutoCloseable {
-    private val coroutineScope = CoroutineScope(coroutineContext)
     private val receiveJob = coroutineScope.launch {
         transport.receiveFlow.cancellable()
             .collect { handleMessageSafe(it) }

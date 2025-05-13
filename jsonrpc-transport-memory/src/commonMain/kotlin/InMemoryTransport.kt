@@ -1,40 +1,46 @@
 package io.github.genkt.jsonrpc.transport.memory
 
 import io.genkt.jsonrpc.Transport
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.launch
 
 @Suppress("FunctionName")
-public fun <T> InMemoryTransport(bufferSize: Int = 128): Pair<Transport<T, T>, Transport<T, T>> {
-    val channel1To2 = Channel<T>(
-        bufferSize,
-        BufferOverflow.DROP_OLDEST,
-    )
-    val channel2To1 = Channel<T>(
-        bufferSize,
-        BufferOverflow.DROP_OLDEST,
-    )
-
+public fun <T> CoroutineScope.InMemoryTransport(
+    bufferSize: Int = Channel.UNLIMITED,
+    onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND,
+    onUndeliveredElement: ((T) -> Unit)? = null,
+): Pair<Transport<T, T>, Transport<T, T>> {
+    val channelIn1 = Channel(bufferSize, onBufferOverflow, onUndeliveredElement)
+    val channelOut1 = Channel(bufferSize, onBufferOverflow, onUndeliveredElement)
+    val channelIn2 = Channel(bufferSize, onBufferOverflow, onUndeliveredElement)
+    val channelOut2 = Channel(bufferSize, onBufferOverflow, onUndeliveredElement)
+    val coroutineScope = this
     val onClose: () -> Unit = {
-        channel1To2.close()
-        channel2To1.close()
+        channelIn1.close()
+        channelOut1.close()
+        channelIn2.close()
+        channelOut2.close()
     }
 
-    val transport1 = Transport(
-        channel1To2,
-        channel2To1.consumeAsFlow(),
-        onClose
-    )
+    launch {
+        channelIn1.consumeAsFlow().collect { channelOut2.send(it) }
+    }
+    launch {
+        channelIn2.consumeAsFlow().collect { channelOut1.send(it) }
+    }
 
-    val transport2 = Transport(
-        channel2To1,
-        channel1To2.consumeAsFlow(),
+    return Transport(
+        channelIn1,
+        channelOut1.consumeAsFlow(),
+        coroutineScope,
         onClose
-    )
-
-    return Pair(
-        transport1,
-        transport2,
+    ) to Transport(
+        channelIn2,
+        channelOut2.consumeAsFlow(),
+        coroutineScope,
+        onClose
     )
 }

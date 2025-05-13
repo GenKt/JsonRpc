@@ -1,7 +1,6 @@
 package sdk.shared
 
-import io.genkt.jsonrpc.RequestId
-import io.modelcontextprotocol.kotlin.sdk.*
+
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.TimeoutCancellationException
@@ -23,6 +22,7 @@ import sdk.PingRequest
 import sdk.Progress
 import sdk.ProgressNotification
 import sdk.Request
+import sdk.RequestId
 import sdk.RequestResult
 import sdk.fromJSON
 import sdk.toJSON
@@ -350,7 +350,7 @@ public abstract class Protocol(
         val messageId = message.id
 
         if (options?.onProgress != null) {
-            progressHandlers[messageId] set options.onProgress
+//            progressHandlers[messageId] set options.onProgress
         }
 
         responseHandlers[messageId] = set@{ response, error ->

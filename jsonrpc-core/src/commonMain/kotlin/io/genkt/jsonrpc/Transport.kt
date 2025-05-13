@@ -1,16 +1,19 @@
 package io.genkt.jsonrpc
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 
+/**
+ * @property coroutineScope will be closed when the transport is closed.
+ */
 public interface Transport<in Input, out Output> : AutoCloseable {
     public val sendChannel: SendChannel<Input>
     public val receiveFlow: Flow<Output>
+    public val coroutineScope: CoroutineScope
 }
 
 public interface SharedTransport<in Input, out Output> : Transport<Input, Output> {
@@ -20,33 +23,37 @@ public interface SharedTransport<in Input, out Output> : Transport<Input, Output
 public fun <Input, Output> Transport(
     sendChannel: SendChannel<Input>,
     receiveFlow: Flow<Output>,
+    coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
 ): Transport<Input, Output> =
     TransportImpl(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow,
+        coroutineScope = coroutineScope,
         onClose = onClose
     )
 
 public fun <Input, Output> SharedTransport(
     sendChannel: SendChannel<Input>,
     receiveFlow: SharedFlow<Output>,
+    coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
 ): SharedTransport<Input, Output> =
     SharedTransportImpl(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow,
+        coroutineScope = coroutineScope,
         onClose = onClose
     )
 
 public fun <Input, Output> Transport<Input, Output>.sharedIn(
-    scope: CoroutineScope,
     started: SharingStarted = SharingStarted.Lazily,
     replay: Int = 0,
 ): SharedTransport<Input, Output> =
     SharedTransport(
         sendChannel = sendChannel,
-        receiveFlow = receiveFlow.shareIn(scope, started, replay),
+        receiveFlow = receiveFlow.shareIn(coroutineScope, started, replay),
+        coroutineScope = coroutineScope,
         onClose = this::close
     )
 
@@ -89,6 +96,7 @@ public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
             )
         },
         receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it) },
+        coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
@@ -101,6 +109,7 @@ public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
             )
         },
         receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it) },
+        coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
@@ -108,6 +117,7 @@ public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
     Transport(
         sendChannel = sendChannel.delegateInput { JsonRpc.json.encodeToJsonElement(JsonRpcMessageSerializer, it) },
         receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it) },
+        coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
@@ -115,6 +125,7 @@ public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport =
     Transport(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.filterIsInstance(),
+        coroutineScope = this.coroutineScope,
         this::close
     )
 
@@ -122,25 +133,26 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
     Transport(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.filterIsInstance(),
+        coroutineScope = this.coroutineScope,
         this::close
     )
 
 public fun StringTransport.asJsonTransport(
-    parse: (Flow<String>) -> Flow<String> = { it },
-    write: (Flow<String>) -> Flow<String> = { it },
+    parse: Interceptor<Flow<String>> = { it },
+    write: Interceptor<Flow<String>> = { it },
 ): JsonTransport =
     Transport(
-        sendChannel = sendChannel.forwarded(CoroutineScope(Dispatchers.Default), write)
+        sendChannel = sendChannel.forwarded(coroutineScope, write)
             .delegateInput { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
         receiveFlow = parse(receiveFlow).map { JsonRpc.json.parseToJsonElement(it) },
+        coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
 public fun JsonRpcTransport.shareAsClientAndServerIn(
-    scope: CoroutineScope,
     started: SharingStarted = SharingStarted.Lazily,
     replay: Int = 0,
 ): Pair<JsonRpcClientTransport, JsonRpcServerTransport> {
-    val shared = sharedIn(scope, started, replay)
+    val shared = sharedIn(started, replay)
     return shared.asJsonClientTransport() to shared.asJsonServerTransport()
 }

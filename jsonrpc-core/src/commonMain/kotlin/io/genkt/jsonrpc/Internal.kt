@@ -1,5 +1,6 @@
 package io.genkt.jsonrpc
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.SharedFlow
 internal data class TransportImpl<in Input, out Output>(
     override val sendChannel: SendChannel<Input>,
     override val receiveFlow: Flow<Output>,
+    override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
 ) : Transport<Input, Output> {
     override fun close() = onClose()
@@ -16,6 +18,7 @@ internal data class TransportImpl<in Input, out Output>(
 internal data class SharedTransportImpl<in Input, out Output>(
     override val sendChannel: SendChannel<Input>,
     override val receiveFlow: SharedFlow<Output>,
+    override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
 ) : SharedTransport<Input, Output> {
     override fun close() = onClose()

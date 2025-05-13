@@ -1,22 +1,12 @@
 package io.genkt.jsonprc.client
 
-import io.genkt.jsonrpc.JsonRpc
-import io.genkt.jsonrpc.JsonRpcClientTransport
-import io.genkt.jsonrpc.JsonRpcFailResponse
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcRequest
-import io.genkt.jsonrpc.JsonRpcServerMessage
-import io.genkt.jsonrpc.JsonRpcServerMessageBatch
-import io.genkt.jsonrpc.JsonRpcServerSingleMessage
-import io.genkt.jsonrpc.JsonRpcSuccessResponse
-import io.genkt.jsonrpc.RequestId
+import io.genkt.jsonrpc.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlin.coroutines.Continuation
-import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -26,15 +16,14 @@ public fun CoroutineScope.JsonRpcClient(
 ): JsonRpcClient = JsonRpcClient(
     transport,
     timeOut,
-    coroutineContext
+    this
 )
 
 public class JsonRpcClient(
     public val transport: JsonRpcClientTransport,
     public val timeOut: Duration = 10.seconds,
-    coroutineContext: CoroutineContext = Dispatchers.Default + Job(),
+    private val coroutineScope: CoroutineScope = transport.coroutineScope,
 ) : AutoCloseable {
-    private val coroutineScope = CoroutineScope(coroutineContext)
     private val requestMapMutex = Mutex()
     private val requestMap = HashMap<RequestId, Continuation<JsonRpcSuccessResponse>>()
     public var maxNumberId: RequestId.NumberId = RequestId.NumberId(0)

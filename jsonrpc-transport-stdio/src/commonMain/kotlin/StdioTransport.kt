@@ -6,21 +6,19 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlin.coroutines.CoroutineContext
 
 @Suppress("FunctionName")
 @OptIn(DelicateCoroutinesApi::class)
-public fun StdioTransport(coroutineContext: CoroutineContext = Dispatchers.Default): StringTransport {
-    val scope = CoroutineScope(coroutineContext)
+public fun CoroutineScope.StdioTransport(): StringTransport {
     val input = Channel<String>()
-    val inputJob = scope.launch {
+    val inputJob = launch {
         while (currentCoroutineContext().isActive) {
             val line = readlnOrNull() ?: break
             input.send(line)
         }
     }
     val output = Channel<String>()
-    val outputJob = scope.launch {
+    val outputJob = launch {
         while (currentCoroutineContext().isActive) {
             output.consumeEach { print(it) }
         }
@@ -28,6 +26,7 @@ public fun StdioTransport(coroutineContext: CoroutineContext = Dispatchers.Defau
     return Transport(
         sendChannel = output,
         receiveFlow = input.consumeAsFlow(),
+        coroutineScope = this,
         onClose = {
             input.cancel()
             inputJob.cancel()

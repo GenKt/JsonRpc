@@ -1,21 +1,18 @@
 package io.genkt.jsonrpc
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
 public typealias Interceptor<T> = (T) -> T
 
-public typealias ScopedInterceptor<T> = suspend CoroutineScope.(T) -> T
-
 @Suppress("FunctionName")
-public fun <Input, Output> CoroutineScope.TransportInterceptor(
+public fun <Input, Output> TransportInterceptor(
     send: Interceptor<Flow<Input>>,
     receive: Interceptor<Flow<Output>>,
 ): Interceptor<Transport<Input, Output>> = { transport ->
-    val coroutineScope = this
     Transport(
-        sendChannel = transport.sendChannel.forwarded(coroutineScope, send),
+        sendChannel = transport.sendChannel.forwarded(transport.coroutineScope, send),
         receiveFlow = receive(transport.receiveFlow),
+        coroutineScope = transport.coroutineScope,
         onClose = transport::close,
     )
 }
