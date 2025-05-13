@@ -1,5 +1,5 @@
 plugins {
-    id("kotlin-multiplatform-ktor")
+    id("kotlin-multiplatform-full")
     id("publishing-convention")
 }
 
@@ -12,8 +12,6 @@ kotlin {
                 implementation(libs.streamlin)
                 api(libs.kotlinx.coroutine.core)
                 api(libs.kotlinx.serialization.json)
-                api(libs.kotlinx.io.core)
-                api(libs.ktor.websockets)
             }
         }
     }

@@ -1,5 +1,5 @@
 plugins {
-    id("kotlin-multiplatform-full")
+    id("kotlin-multiplatform-ktor")
     id("publishing-convention")
 }
 
@@ -7,7 +7,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":genkt-mcp-common"))
+                api(project(":genkt-mcp-sdk-common"))
+                api(libs.ktor.client.cio)
             }
         }
     }

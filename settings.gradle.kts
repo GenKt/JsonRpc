@@ -26,6 +26,9 @@ genKtModules(
     "mcp-common",
     "mcp-server",
     "mcp-client",
-    "mcp-test"
+    "mcp-sdk-common",
+    "mcp-sdk-server",
+    "mcp-sdk-client",
+    "mcp-sdk-test"
 )
 
