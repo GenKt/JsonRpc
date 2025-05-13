@@ -7,11 +7,11 @@ import kotlin.jvm.JvmInline
 @Serializable
 public data class McpServerCapabilities(
     val experimental: JsonObject? = null,
-    val sampling: JsonObject? = null,
     val logging: JsonObject? = null,
     val prompts: PromptsCapability? = null,
     val resources: ResourcesCapability? = null,
     val tools: ToolsCapability? = null,
+    val completion: JsonObject? = null,
 ) {
     @Serializable
     public data class PromptsCapability(
