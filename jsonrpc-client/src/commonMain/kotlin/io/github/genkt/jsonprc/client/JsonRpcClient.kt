@@ -47,9 +47,11 @@ public class JsonRpcClient(
         }.resumeWith(result)
     }
 
-    private val receiveJob = coroutineScope.launch {
-        transport.receiveFlow
-            .collect { handleResponse(it) }
+    init {
+        coroutineScope.launch {
+            transport.receiveFlow
+                .collect { handleResponse(it) }
+        }
     }
 
     public suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse {
