@@ -171,3 +171,64 @@ public data class McpResource(
         public val uri: String,
     )
 }
+
+@Serializable
+public data class McpTool(
+    public val name: String,
+    public val description: String,
+    public val inputSchema: Input,
+    public val annotations: JsonObject? = null,
+) {
+    @Serializable
+    public data class Input(
+        public val properties: JsonObject,
+        public val required: List<String>
+    )
+
+    @Serializable
+    public data class ListRequest(
+        public val cursor: String? = null
+    )
+
+    @Serializable
+    public data class ListResponse(
+        public val tools: List<McpTool>,
+        public val nextCursor: String? = null,
+    )
+
+    @Serializable
+    public data class CallRequest(
+        public val name: String,
+        public val arguments: Map<String, String>
+    )
+
+    @Serializable
+    public data class CallResponse(
+        public val content: List<Content>,
+    )
+
+    @Serializable(with = McpToolContentSerializer::class)
+    public sealed interface Content {
+        @Serializable(with = McpToolTextContentSerializer::class)
+        @JvmInline
+        public value class Text(
+            public val text: String,
+        ): Content
+        @Serializable(with = McpToolImageContentSerializer::class)
+        public data class Image(
+            public val data: String,
+            public val mimeType: String,
+        ): Content
+        @Serializable(with = McpToolAudioContentSerializer::class)
+        public data class Audio(
+            public val data: String,
+            public val mimeType: String,
+        ): Content
+        @Serializable(with = McpToolResourceContentSerializer::class)
+        public data class Resource(
+            public val uri: String,
+            public val mimeType: String,
+            public val text: String,
+        ): Content
+    }
+}

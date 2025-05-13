@@ -73,27 +73,6 @@ internal object McpPromptContentSerializer :
         }
     )
 
-internal object McpResourceContentSerializer :
-    KSerializer<McpResource.Content> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpResource.Content", PolymorphicKind.SEALED),
-        {
-            when (it) {
-                is McpResource.Content.Text -> McpResource.Content.Text.serializer()
-                is McpResource.Content.Binary -> McpResource.Content.Binary.serializer()
-                else -> error("Unknown type: $it")
-            }
-        },
-        {
-            if (it.jsonObject["text"] != null) {
-                McpResource.Content.Text.serializer()
-            } else if (it.jsonObject["blob"] != null) {
-                McpResource.Content.Binary.serializer()
-            } else {
-                error("Unknown type: $it")
-            }
-        }
-    )
-
 internal object McpPromptTextContentSerializer :
     KSerializer<McpPrompt.Content.Text> by DelegatingSerializer(
         delegate = McpTextContentDelegate.serializer(),
@@ -119,6 +98,78 @@ internal object McpPromptResourceContentSerializer :
     KSerializer<McpPrompt.Content.Resource> by DelegatingSerializer(
         delegate = McpResourceContentDelegate.serializer(),
         fromDelegate = { McpPrompt.Content.Resource(it.resource.uri, it.resource.mimeType, it.resource.text) },
+        toDelegate = { McpResourceContentDelegate(it.uri, it.mimeType, it.text) },
+    )
+
+internal object McpResourceContentSerializer :
+    KSerializer<McpResource.Content> by JsonPolymorphicSerializer(
+        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpResource.Content", PolymorphicKind.SEALED),
+        {
+            when (it) {
+                is McpResource.Content.Text -> McpResource.Content.Text.serializer()
+                is McpResource.Content.Binary -> McpResource.Content.Binary.serializer()
+                else -> error("Unknown type: $it")
+            }
+        },
+        {
+            if (it.jsonObject["text"] != null) {
+                McpResource.Content.Text.serializer()
+            } else if (it.jsonObject["blob"] != null) {
+                McpResource.Content.Binary.serializer()
+            } else {
+                error("Unknown type: $it")
+            }
+        }
+    )
+
+internal object McpToolContentSerializer :
+    KSerializer<McpTool.Content> by JsonPolymorphicSerializer(
+        buildSerialDescriptor("io.github.genkt.mcp.common.dto.McpTool.Content", PolymorphicKind.SEALED),
+        {
+            when (it) {
+                is McpTool.Content.Text -> McpToolTextContentSerializer
+                is McpTool.Content.Image -> McpToolImageContentSerializer
+                is McpTool.Content.Audio -> McpToolAudioContentSerializer
+                is McpTool.Content.Resource -> McpToolResourceContentSerializer
+                else -> error("Unknown type: $it")
+            }
+        },
+        {
+            when (it.jsonObject["type"]?.jsonPrimitive?.content) {
+                "text" -> McpToolTextContentSerializer
+                "image" -> McpToolImageContentSerializer
+                "audio" -> McpToolAudioContentSerializer
+                "resource" -> McpToolResourceContentSerializer
+                else -> error("Unknown type: $it")
+            }
+        }
+    )
+
+internal object McpToolTextContentSerializer :
+    KSerializer<McpTool.Content.Text> by DelegatingSerializer(
+        delegate = McpTextContentDelegate.serializer(),
+        fromDelegate = { McpTool.Content.Text(it.text) },
+        toDelegate = { McpTextContentDelegate(text = it.text) },
+    )
+
+internal object McpToolImageContentSerializer :
+    KSerializer<McpTool.Content.Image> by DelegatingSerializer(
+        delegate = McpImageContentDelegate.serializer(),
+        fromDelegate = { McpTool.Content.Image(it.data, it.mimeType) },
+        toDelegate = { McpImageContentDelegate(data = it.data, mimeType = it.mimeType) },
+    )
+
+internal object McpToolAudioContentSerializer :
+    KSerializer<McpTool.Content.Audio> by DelegatingSerializer(
+        delegate = McpAudioContentDelegate.serializer(),
+        fromDelegate = { McpTool.Content.Audio(it.data, it.mimeType) },
+        toDelegate = { McpAudioContentDelegate(data = it.data, mimeType = it.mimeType) },
+    )
+
+internal object McpToolResourceContentSerializer :
+    KSerializer<McpTool.Content.Resource> by DelegatingSerializer(
+        delegate = McpResourceContentDelegate.serializer(),
+        fromDelegate = { McpTool.Content.Resource(it.resource.uri, it.resource.mimeType, it.resource.text) },
         toDelegate = { McpResourceContentDelegate(it.uri, it.mimeType, it.text) },
     )
 
