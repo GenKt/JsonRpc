@@ -5,7 +5,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.map
 import kotlin.coroutines.*
+import kotlin.experimental.ExperimentalTypeInference
 
 public data class EmitItem<T>(
     public val value: T,
@@ -27,8 +29,9 @@ public suspend fun <T> SafeFlowCollector<T>.safeEmit(
     deferred.await()
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTypeInference::class)
 public fun <T, R> SafeFlowCollector<R>.mapFrom(
+    @BuilderInference
     transform: (SafeFlow<T>) -> SafeFlow<R>,
 ): SafeFlowCollector<T> {
     val deferred = CompletableDeferred<SafeFlowCollector<T>>()
@@ -76,10 +79,12 @@ public suspend fun main(): Unit = coroutineScope {
             }
         }
     }
+    val newCollector = collector.mapFrom<Int, Int> { it.map { it.copy(value = it.value + 1) } }
     for (i in 1..10) {
-        println("Emitting: $i")
         try {
-            collector.safeEmit(i)
+            delay(1000)
+            println("Emitting: $i")
+            newCollector.safeEmit(i)
             println("Emitted: $i")
         } catch (_: Exception) {
             println("Failed to emit: $i")
