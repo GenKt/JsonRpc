@@ -79,6 +79,9 @@ public suspend fun JsonRpcClient.sendRequest(
     params: JsonElement? = null,
     jsonrpc: String = JsonRpc.VERSION,
 ): JsonRpcSuccessResponse {
+    if (id == RequestId.NumberId(maxNumberId.value + 1)) {
+        maxNumberId = RequestId.NumberId(maxNumberId.value + 1)
+    }
     return send(
         JsonRpcRequest(
             id = id,
