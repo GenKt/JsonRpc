@@ -2,6 +2,7 @@ package io.github.genkt.mcp.common.dto
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlin.jvm.JvmInline
 
 @Serializable
 public data class McpClientCapabilities(
@@ -48,6 +49,7 @@ public sealed interface McpSampling {
     @Serializable(with = McpSamplingContentSerializer::class)
     public sealed interface Content {
         @Serializable(with = McpSamplingTextContentSerializer::class)
+        @JvmInline
         public value class Text(
             public val text: String,
         ) : Content
