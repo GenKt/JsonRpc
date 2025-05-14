@@ -4,6 +4,12 @@ import kotlinx.coroutines.flow.Flow
 
 public typealias Interceptor<T> = (T) -> T
 
+public inline operator fun <T> Interceptor<T>.plus(
+    crossinline other: Interceptor<T>,
+): Interceptor<T> = { t ->
+    this(other(t))
+}
+
 public class TransportInterceptor<Input, Output>(
     send: Interceptor<Flow<SendAction<Input>>>,
     receive: Interceptor<Flow<Result<Output>>>,
