@@ -2,6 +2,8 @@ package io.genkt.jsonprc.client
 
 import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration
 
 public class JsonRpcClientInterceptor(
     public val interceptTransport: Interceptor<JsonRpcClientTransport> = { it },
@@ -29,6 +31,10 @@ public fun JsonRpcClientInterceptor.Builder.build(): JsonRpcClientInterceptor =
 public fun JsonRpcClientInterceptor.Builder.interceptRequest(value: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse>) {
     requestInterceptor = value
 }
+
+@Suppress("FunctionName")
+public fun <T, R> JsonRpcClientInterceptor.Builder.TimeOut(duration: Duration): Interceptor<suspend (T) -> R> =
+    { f -> { param -> withTimeout(duration) { f(param) } } }
 
 public fun JsonRpcClientInterceptor.Builder.interceptNotification(value: Interceptor<suspend (JsonRpcNotification) -> Unit>) {
     notificationInterceptor = value
