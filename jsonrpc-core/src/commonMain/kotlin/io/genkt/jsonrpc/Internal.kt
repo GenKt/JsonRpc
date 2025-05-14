@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 
 internal data class TransportImpl<in Input, out Output>(
-    override val sendChannel: SendChannel<Input>,
-    override val receiveFlow: Flow<Output>,
+    override val sendChannel: SendChannel<SendAction<Input>>,
+    override val receiveFlow: Flow<Result<Output>>,
     override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
 ) : Transport<Input, Output> {
@@ -16,8 +16,8 @@ internal data class TransportImpl<in Input, out Output>(
 }
 
 internal data class SharedTransportImpl<in Input, out Output>(
-    override val sendChannel: SendChannel<Input>,
-    override val receiveFlow: SharedFlow<Output>,
+    override val sendChannel: SendChannel<SendAction<Input>>,
+    override val receiveFlow: SharedFlow<Result<Output>>,
     override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
 ) : SharedTransport<Input, Output> {

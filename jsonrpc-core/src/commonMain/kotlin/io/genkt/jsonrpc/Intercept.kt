@@ -39,11 +39,11 @@ public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.intercept
     receiveInterceptor = receive
 }
 
-public fun <Input, Output> Transport<Input, Output>.intercepted(
+public fun <Input, Output> Transport<Input, Output>.interceptedWith(
     interceptor: Interceptor<Transport<Input, Output>>
 ): Transport<Input, Output> = interceptor(this)
 
 public fun <Input, Output> Transport<Input, Output>.intercepted(
     buildAction: TransportInterceptor.Builder<Input, Output>.() -> Unit
 ): Transport<Input, Output> =
-    intercepted(TransportInterceptor.Builder<Input, Output>().apply(buildAction).build())
+    interceptedWith(TransportInterceptor.Builder<Input, Output>().apply(buildAction).build())
