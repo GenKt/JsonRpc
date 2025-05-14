@@ -12,8 +12,6 @@ import io.genkt.jsonrpc.RequestId
 import io.genkt.jsonrpc.asJsonRpcClientTransport
 import io.genkt.jsonrpc.asJsonRpcServerTransport
 import io.genkt.jsonrpc.server.JsonRpcServer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonObject
@@ -24,7 +22,6 @@ import kotlinx.serialization.json.put
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertIs
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 suspend fun testJsonTransport(
