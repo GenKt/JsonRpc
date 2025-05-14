@@ -22,34 +22,27 @@ public class TransportInterceptor<Input, Output>(
     )
 } {
     public class Builder<Input, Output> {
-        public var sendInterceptor: Interceptor<Flow<SendAction<Input>>> = { it }
-        public var receiveInterceptor: Interceptor<Flow<Result<Output>>> = { it }
+        public var sendChannelInterceptor: Interceptor<Flow<SendAction<Input>>> = { it }
+        public var receiveFlowInterceptor: Interceptor<Flow<Result<Output>>> = { it }
+    }
+
+    public companion object {
+        public operator fun <Input, Output> invoke(buildAction: Builder<Input, Output>.() -> Unit): TransportInterceptor<Input, Output> =
+            Builder<Input, Output>().apply(buildAction).build()
     }
 }
 
-public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.build(): Interceptor<Transport<Input, Output>> =
+public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.build(): TransportInterceptor<Input, Output> =
     TransportInterceptor(
-        send = sendInterceptor,
-        receive = receiveInterceptor,
+        send = sendChannelInterceptor,
+        receive = receiveFlowInterceptor,
     )
 
-public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.interceptSend(
-    send: Interceptor<Flow<SendAction<Input>>>
-) {
-    sendInterceptor = send
-}
-
-public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.interceptReceive(
-    receive: Interceptor<Flow<Result<Output>>>
-) {
-    receiveInterceptor = receive
-}
-
-public fun <Input, Output> Transport<Input, Output>.interceptedWith(
+public fun <Input, Output> Transport<Input, Output>.intercepted(
     interceptor: Interceptor<Transport<Input, Output>>
 ): Transport<Input, Output> = interceptor(this)
 
 public fun <Input, Output> Transport<Input, Output>.intercepted(
     buildAction: TransportInterceptor.Builder<Input, Output>.() -> Unit
 ): Transport<Input, Output> =
-    interceptedWith(TransportInterceptor.Builder<Input, Output>().apply(buildAction).build())
+    intercepted(TransportInterceptor(buildAction))
