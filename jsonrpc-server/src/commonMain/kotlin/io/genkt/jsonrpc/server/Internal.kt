@@ -1,29 +1,21 @@
 package io.genkt.jsonrpc.server
 
-import io.genkt.jsonrpc.InternalError
-import io.genkt.jsonrpc.JsonRpcClientMessage
-import io.genkt.jsonrpc.JsonRpcClientMessageBatch
-import io.genkt.jsonrpc.JsonRpcFailResponse
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcRequest
-import io.genkt.jsonrpc.JsonRpcServerMessage
-import io.genkt.jsonrpc.JsonRpcServerTransport
-import io.genkt.jsonrpc.sendOrThrow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.cancel
+import io.genkt.jsonrpc.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.cancellable
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 
 internal class JsonRpcServerImpl(
     override val transport: JsonRpcServerTransport,
     override val onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
     override val onNotification: suspend (JsonRpcNotification) -> Unit,
-    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
+    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : JsonRpcServer {
-    private val coroutineScope: CoroutineScope = transport.coroutineScope
+    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(coroutineContext)
     private val receiveJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
         transport.receiveFlow.cancellable()
             .collect { result ->
@@ -80,13 +72,13 @@ internal class JsonRpcServerImpl(
 internal class InterceptedJsonRpcServer(
     private val delegate: JsonRpcServer,
     interceptor: JsonRpcServerInterceptor,
-): JsonRpcServer by delegate {
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
+) : JsonRpcServer by delegate {
     override val transport = interceptor.interceptTransport(delegate.transport)
     override val onRequest = interceptor.interceptRequestHandler(delegate.onRequest)
     override val onNotification = interceptor.interceptNotificationHandler(delegate.onNotification)
     override val errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler)
-
-    private val coroutineScope: CoroutineScope = transport.coroutineScope
+    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(coroutineContext)
 
     private val receiveJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
         transport.receiveFlow.cancellable()
@@ -147,3 +139,6 @@ private fun fallbackFailResponse(
         data = JsonPrimitive(e.stackTraceToString())
     )
 )
+
+private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
+    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
