@@ -2,6 +2,7 @@ package io.github.genkt.jsonrpc.transport.memory
 
 import io.genkt.jsonrpc.SendAction
 import io.genkt.jsonrpc.Transport
+import io.genkt.jsonrpc.commit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -28,10 +29,16 @@ public fun <T> CoroutineScope.InMemoryTransport(
     }
 
     launch {
-        channelIn1.consumeAsFlow().collect { channelOut2.send(Result.success(it.value)) }
+        channelIn1.consumeAsFlow().collect {
+            channelOut2.send(Result.success(it.value))
+            it.commit()
+        }
     }
     launch {
-        channelIn2.consumeAsFlow().collect { channelOut1.send(Result.success(it.value)) }
+        channelIn2.consumeAsFlow().collect {
+            channelOut1.send(Result.success(it.value))
+            it.commit()
+        }
     }
 
     return Transport(
