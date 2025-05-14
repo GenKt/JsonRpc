@@ -20,6 +20,11 @@ public class JsonRpcServerInterceptor(
         public var errorHandlerInterceptor: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it }
         public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
     }
+
+    public companion object {
+        public operator fun invoke(buildAction: Builder.() -> Unit): JsonRpcServerInterceptor =
+            Builder().apply(buildAction).build()
+    }
 }
 
 public fun JsonRpcServerInterceptor.Builder.build(): JsonRpcServerInterceptor =
@@ -35,44 +40,24 @@ public fun JsonRpcServerInterceptor.Builder.interceptRequestHandler(value: Inter
     requestHandlerInterceptor = value
 }
 
-public fun JsonRpcServerInterceptor.Builder.customErrorResponse(value: suspend (Throwable) -> JsonRpcServerSingleMessage) {
-    requestHandlerInterceptor = { requestHandler ->
+@Suppress("FunctionName")
+public inline fun JsonRpcServerInterceptor.Builder.CustomErrorResponse(
+    crossinline generateErrorResponse: suspend (Throwable) -> JsonRpcServerSingleMessage
+): Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage> =
+    { requestHandler ->
         { request ->
             try {
                 requestHandler(request)
             } catch (e: Throwable) {
-                value(e)
+                generateErrorResponse(e)
             }
         }
     }
-}
-
-public fun JsonRpcServerInterceptor.Builder.interceptNotificationHandler(value: Interceptor<suspend (JsonRpcNotification) -> Unit>) {
-    notificationHandlerInterceptor = value
-}
-
-public fun JsonRpcServerInterceptor.Builder.interceptErrorHandler(value: Interceptor<suspend CoroutineScope.(Throwable) -> Unit>) {
-    errorHandlerInterceptor = value
-}
-
-public fun JsonRpcServerInterceptor.Builder.interceptTransport(value: Interceptor<JsonRpcServerTransport>) {
-    transportInterceptor = value
-}
-
-public fun JsonRpcServerInterceptor.Builder.buildTransportInterceptor(buildAction: TransportInterceptor.Builder<JsonRpcServerMessage, JsonRpcClientMessage>.() -> Unit) {
-    transportInterceptor = TransportInterceptor.Builder<JsonRpcServerMessage, JsonRpcClientMessage>()
-        .apply(buildAction)
-        .build()
-}
-
-public fun JsonRpcServerInterceptor.Builder.addCoroutineContext(value: CoroutineContext) {
-    additionalCoroutineContext = additionalCoroutineContext + value
-}
 
 public fun JsonRpcServer.intercept(
     interceptor: JsonRpcServerInterceptor
 ): JsonRpcServer = interceptor(this)
 
 public fun JsonRpcServer.intercepted(
-    block: JsonRpcServerInterceptor.Builder.() -> Unit
-) = intercept(JsonRpcServerInterceptor.Builder().apply(block).build())
+    buildAction: JsonRpcServerInterceptor.Builder.() -> Unit
+) = intercept(JsonRpcServerInterceptor(buildAction))
