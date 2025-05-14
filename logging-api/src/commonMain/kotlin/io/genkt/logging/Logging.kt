@@ -1,12 +1,17 @@
 package io.genkt.logging
 
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+
 public enum class Level {
-    DEBUG, INFO, WARN, ERROR
+    DEBUG, INFO, WARN, ERROR;
+    public fun greaterOrEqual(level: Level): Boolean = ordinal >= level.ordinal
 }
 
 public class Message(
     public val level: Level,
-    public val timestamp: Long,
+    public val timestamp: Instant,
     public val message: String,
 )
 
@@ -25,7 +30,7 @@ public interface Transport {
 public fun Logger(
     level: Level = Level.INFO,
     transports: List<Transport> = emptyList(),
-    formatter: (Message) -> String = { "${it.timestamp} [${it.level}] ${it.message}" },
+    formatter: (Message) -> String = { "[${it.timestamp.toLocalDateTime(TimeZone.UTC)}][${it.level}]${it.message}" },
 ): Logger = LoggerImpl(
     level = level,
     transports = transports,
