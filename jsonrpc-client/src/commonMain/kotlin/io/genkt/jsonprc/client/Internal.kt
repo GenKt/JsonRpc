@@ -2,18 +2,22 @@ package io.genkt.jsonprc.client
 
 import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.Continuation
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 internal class JsonRpcClientImpl(
     override val transport: JsonRpcClientTransport,
     override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = { },
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : JsonRpcClient {
-    private val coroutineScope: CoroutineScope = transport.coroutineScope
+    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(coroutineContext)
     private val requestMapMutex = Mutex()
     private val requestMap = HashMap<RequestId, Continuation<JsonRpcSuccessResponse>>()
     private suspend fun handleResponse(response: JsonRpcServerMessage) {
@@ -64,10 +68,11 @@ internal class JsonRpcClientImpl(
 internal class InterceptedJsonRpcClient(
     private val delegate: JsonRpcClient,
     interceptor: JsonRpcClientInterceptor,
-) : JsonRpcClient by delegate {
+) : JsonRpcClient {
     override val transport: JsonRpcClientTransport = interceptor.interceptTransport(delegate.transport)
     override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit =
         interceptor.interceptErrorHandler(delegate.errorHandler)
+    override val coroutineScope: CoroutineScope = delegate.coroutineScope.newChild(interceptor.additionalCoroutineContext)
     private val sendRequest = interceptor.interceptRequest(delegate::send)
     private val sendNotification = interceptor.interceptNotification(delegate::send)
 
@@ -78,4 +83,14 @@ internal class InterceptedJsonRpcClient(
     override suspend fun send(notification: JsonRpcNotification) {
         sendNotification(notification)
     }
+
+    override fun close() {
+        // TODO: check if this ordering is proper
+        coroutineScope.cancel()
+        delegate.close()
+        transport.close()
+    }
 }
+
+private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
+    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))

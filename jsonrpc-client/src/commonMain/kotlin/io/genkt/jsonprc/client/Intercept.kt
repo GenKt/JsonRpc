@@ -3,6 +3,8 @@ package io.genkt.jsonprc.client
 import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration
 
 public class JsonRpcClientInterceptor(
@@ -10,6 +12,7 @@ public class JsonRpcClientInterceptor(
     public val interceptRequest: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it },
     public val interceptNotification: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it },
     public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it },
+    public val additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : Interceptor<JsonRpcClient> {
     override fun invoke(client: JsonRpcClient): JsonRpcClient = InterceptedJsonRpcClient(client, this)
     public class Builder {
@@ -17,6 +20,7 @@ public class JsonRpcClientInterceptor(
         public var requestInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it }
         public var notificationInterceptor: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it }
         public var errorHandlerInterceptor: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it }
+        public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
     }
 }
 

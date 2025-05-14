@@ -81,6 +81,7 @@ internal class InterceptedJsonRpcServer(
     coroutineContext = interceptor.additionalCoroutineContext + coroutineContext,
 ) {
     override fun close() {
+        // TODO: check if this ordering is proper
         coroutineScope.cancel()
         delegate.close()
         transport.close()

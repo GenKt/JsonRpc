@@ -4,18 +4,23 @@ import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 public fun JsonRpcClient(
     transport: JsonRpcClientTransport,
     errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ): JsonRpcClient = JsonRpcClientImpl(
     transport,
     errorHandler,
+    coroutineContext
 )
 
 public interface JsonRpcClient : AutoCloseable {
     public val transport: JsonRpcClientTransport
     public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
+    public val coroutineScope: CoroutineScope
     public suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse
     public suspend fun send(notification: JsonRpcNotification)
 }
