@@ -15,7 +15,8 @@ public class JsonRpcServerInterceptor(
     public val interceptRequestHandler: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage> = { it },
     public val interceptNotificationHandler: Interceptor<suspend (JsonRpcNotification) -> Unit>,
     public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit>,
-): Interceptor<JsonRpcServer> by { InterceptedJsonRpcServer(it, this) } {
+): Interceptor<JsonRpcServer> {
+    override fun invoke(server: JsonRpcServer): JsonRpcServer = InterceptedJsonRpcServer(server, this)
     public class Builder {
         public var transportInterceptor: Interceptor<JsonRpcServerTransport> = { it }
         public var requestHandlerInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage> = { it }

@@ -13,6 +13,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.startCoroutine
+import kotlin.jvm.JvmName
 
 /**
  * @property coroutineScope will be closed when the transport is closed.
@@ -120,10 +121,12 @@ public fun <T, R> SendChannel<SendAction<R>>.delegateInputCatching(
         transform = { it.mapOrThrow(transform) }
     )
 
+@JvmName("delegateInputCatchingResult")
 internal inline fun <T, R> Flow<Result<T>>.mapCatching(
     crossinline transform: suspend (T) -> R,
 ): Flow<Result<R>> = map { result -> result.mapCatching { transform(it) } }
 
+@JvmName("delegateInputCatchingSendAction")
 public fun <T, R> Flow<SendAction<T>>.mapCatching(
     transform: suspend (T) -> R,
 ): Flow<SendAction<R>> =

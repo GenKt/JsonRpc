@@ -1,8 +1,10 @@
 package io.github.genkt.jsonrpc.test
 
+import io.genkt.jsonrpc.sendOrThrow
 import io.github.genkt.jsonrpc.transport.stdio.StdioTransport
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import java.io.ByteArrayInputStream
@@ -53,7 +55,7 @@ class StdioTransportTest {
         val receivedData = transport.receiveFlow.first()
 
         // Verify the received data matches the input
-        assertEquals("Test input data", receivedData)
+        assertEquals("Test input data", receivedData.getOrNull())
 
         // Close the transport
         transport.close()
@@ -71,7 +73,7 @@ class StdioTransportTest {
 
         // Send data through the transport
         val testOutput = "Test output data"
-        transport.sendChannel.send(testOutput)
+        transport.sendChannel.sendOrThrow(testOutput)
 
         // Give some time for the coroutine to process the output
         delay(100)
@@ -94,7 +96,9 @@ class StdioTransportTest {
         val transport = StdioTransport()
 
         // Read multiple lines from the transport's receive flow
-        val receivedLines = transport.receiveFlow.take(3).toList()
+        val receivedLines = transport.receiveFlow.take(3).map {
+            it.getOrNull() ?: ""
+        }.toList()
 
         // Verify the received lines match the input
         assertEquals(listOf("Line 1", "Line 2", "Line 3"), receivedLines)

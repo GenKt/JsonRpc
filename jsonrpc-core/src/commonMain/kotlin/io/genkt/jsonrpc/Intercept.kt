@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.Flow
 public typealias Interceptor<T> = (T) -> T
 
 public class TransportInterceptor<Input, Output>(
-    send: Interceptor<Flow<Input>>,
-    receive: Interceptor<Flow<Output>>,
+    send: Interceptor<Flow<SendAction<Input>>>,
+    receive: Interceptor<Flow<Result<Output>>>,
 ) : Interceptor<Transport<Input, Output>> by { transport ->
     Transport(
         sendChannel = transport.sendChannel.forwarded(transport.coroutineScope, send),
@@ -16,8 +16,8 @@ public class TransportInterceptor<Input, Output>(
     )
 } {
     public class Builder<Input, Output> {
-        public var sendInterceptor: Interceptor<Flow<Input>> = { it }
-        public var receiveInterceptor: Interceptor<Flow<Output>> = { it }
+        public var sendInterceptor: Interceptor<Flow<SendAction<Input>>> = { it }
+        public var receiveInterceptor: Interceptor<Flow<Result<Output>>> = { it }
     }
 }
 
@@ -28,13 +28,13 @@ public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.build(): 
     )
 
 public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.interceptSend(
-    send: Interceptor<Flow<Input>>
+    send: Interceptor<Flow<SendAction<Input>>>
 ) {
     sendInterceptor = send
 }
 
 public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.interceptReceive(
-    receive: Interceptor<Flow<Output>>
+    receive: Interceptor<Flow<Result<Output>>>
 ) {
     receiveInterceptor = receive
 }

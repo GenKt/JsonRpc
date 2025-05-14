@@ -1,5 +1,6 @@
 package io.github.genkt.jsonrpc.transport.stdio
 
+import io.genkt.jsonrpc.SendAction
 import io.genkt.jsonrpc.StringTransport
 import io.genkt.jsonrpc.Transport
 import kotlinx.coroutines.*
@@ -10,14 +11,14 @@ import kotlinx.coroutines.flow.consumeAsFlow
 @Suppress("FunctionName")
 @OptIn(DelicateCoroutinesApi::class)
 public fun CoroutineScope.StdioTransport(): StringTransport {
-    val input = Channel<String>()
+    val input = Channel<Result<String>>()
     val inputJob = launch {
         while (currentCoroutineContext().isActive) {
             val line = readlnOrNull() ?: break
-            input.send(line)
+            input.send(Result.success(line))
         }
     }
-    val output = Channel<String>()
+    val output = Channel<SendAction<String>>()
     val outputJob = launch {
         while (currentCoroutineContext().isActive) {
             output.consumeEach { print(it) }

@@ -56,7 +56,6 @@ suspend fun testJsonTransport(
     )
     val client = JsonRpcClient(
         transport = clientTransport,
-        timeOut = 100.milliseconds,
     )
 
     val response = client.sendRequest(

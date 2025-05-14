@@ -8,7 +8,8 @@ public class JsonRpcClientInterceptor(
     public val interceptRequest: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it },
     public val interceptNotification: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it },
     public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it },
-) : Interceptor<JsonRpcClient> by { InterceptedJsonRpcClient(it, this) } {
+) : Interceptor<JsonRpcClient> {
+    override fun invoke(client: JsonRpcClient): JsonRpcClient = InterceptedJsonRpcClient(client, this)
     public class Builder {
         public var transportInterceptor: Interceptor<JsonRpcClientTransport> = { it }
         public var requestInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it }
