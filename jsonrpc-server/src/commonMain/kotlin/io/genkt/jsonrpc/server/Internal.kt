@@ -84,7 +84,7 @@ internal class InterceptedJsonRpcServer(
     interceptor: JsonRpcServerInterceptor,
 ): JsonRpcServer by delegate {
     override val transport = interceptor.interceptTransport(delegate.transport)
-    val requestHandler = interceptor.interceptRequestHandler(delegate.onRequest)
-    val notificationHandler = interceptor.interceptNotificationHandler(delegate.onNotification)
+    override val onRequest = interceptor.interceptRequestHandler(delegate.onRequest)
+    override val onNotification = interceptor.interceptNotificationHandler(delegate.onNotification)
     override val errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler)
 }
