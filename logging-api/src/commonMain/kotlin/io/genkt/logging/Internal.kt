@@ -5,8 +5,8 @@ internal class LoggerImpl(
     override val transports: List<Transport>,
     override val formatter: (Message) -> String,
 ): Logger {
-    override fun log(level: Level, message: String) =
+    override fun log(message: Message) =
         transports.forEach {
-            it.log(level, message)
+            it.log(level, formatter(message))
         }
 }

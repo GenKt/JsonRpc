@@ -14,7 +14,7 @@ public interface Logger {
     public val level: Level
     public val transports: List<Transport>
     public val formatter: (Message) -> String
-    public fun log(level: Level, message: String)
+    public fun log(message: Message)
 }
 
 public interface Transport {
