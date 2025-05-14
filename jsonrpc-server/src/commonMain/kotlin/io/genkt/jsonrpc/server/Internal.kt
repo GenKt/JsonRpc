@@ -66,14 +66,7 @@ internal class JsonRpcServerImpl(
             throw e
         } catch (e: Throwable) {
             launch { errorHandler(e) }
-            JsonRpcFailResponse(
-                request.id,
-                JsonRpcFailResponse.Error(
-                    code = JsonRpcFailResponse.Error.Code.InternalError,
-                    message = e.message ?: "Internal error",
-                    data = JsonPrimitive(e.stackTraceToString())
-                )
-            )
+            fallbackFailResponse(request, e)
         }
         launch { transport.sendChannel.sendOrThrow(response) }
     }
@@ -133,14 +126,7 @@ internal class InterceptedJsonRpcServer(
             throw e
         } catch (e: Throwable) {
             launch { errorHandler(e) }
-            JsonRpcFailResponse(
-                request.id,
-                JsonRpcFailResponse.Error(
-                    code = JsonRpcFailResponse.Error.Code.InternalError,
-                    message = e.message ?: "Internal error",
-                    data = JsonPrimitive(e.stackTraceToString())
-                )
-            )
+            fallbackFailResponse(request, e)
         }
         launch { transport.sendChannel.sendOrThrow(response) }
     }
@@ -149,3 +135,15 @@ internal class InterceptedJsonRpcServer(
         receiveJob.start()
     }
 }
+
+private fun fallbackFailResponse(
+    request: JsonRpcRequest,
+    e: Throwable
+): JsonRpcFailResponse = JsonRpcFailResponse(
+    request.id,
+    JsonRpcFailResponse.Error(
+        code = JsonRpcFailResponse.Error.Code.InternalError,
+        message = e.message ?: "Internal error",
+        data = JsonPrimitive(e.stackTraceToString())
+    )
+)
