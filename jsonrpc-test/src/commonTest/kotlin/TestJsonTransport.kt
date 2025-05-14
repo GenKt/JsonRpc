@@ -1,27 +1,19 @@
 package io.github.genkt.jsonrpc.test
 
 import io.genkt.jsonprc.client.JsonRpcClient
-import io.genkt.jsonprc.client.JsonRpcTimeoutException
+import io.genkt.jsonprc.client.intercept
 import io.genkt.jsonprc.client.sendNotification
 import io.genkt.jsonprc.client.sendRequest
-import io.genkt.jsonrpc.Empty
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcSuccessResponse
-import io.genkt.jsonrpc.JsonTransport
-import io.genkt.jsonrpc.RequestId
-import io.genkt.jsonrpc.asJsonRpcClientTransport
-import io.genkt.jsonrpc.asJsonRpcServerTransport
+import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertIs
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 suspend fun testJsonTransport(
@@ -54,7 +46,9 @@ suspend fun testJsonTransport(
     server.start()
     val client = JsonRpcClient(
         transport = clientTransport,
-    )
+    ).intercept {
+        requestInterceptor = TimeOut(100.milliseconds)
+    }
 
     val response = client.sendRequest(
         id = RequestId.NumberId(1),
@@ -94,7 +88,6 @@ suspend fun testJsonTransport(
         "Params cannot be null"
     )
 
-
     // Send a request from the client and expect a timeout
     val exception = assertFails {
         client.sendRequest(
@@ -105,7 +98,7 @@ suspend fun testJsonTransport(
     }
 
     // Verify the exception is a JsonRpcTimeoutException
-    assertIs<JsonRpcTimeoutException>(exception)
+    assertIs<TimeoutCancellationException>(exception)
 
 
     server.close()

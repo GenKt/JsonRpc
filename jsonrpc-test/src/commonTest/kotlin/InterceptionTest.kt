@@ -1,41 +1,34 @@
 package io.github.genkt.jsonrpc.test
 
 import io.genkt.jsonprc.client.JsonRpcClient
-import io.genkt.jsonprc.client.interceptRequest
-import io.genkt.jsonprc.client.intercepted
+import io.genkt.jsonprc.client.intercept
 import io.genkt.jsonprc.client.sendRequest
-import io.genkt.jsonrpc.JsonRpc
-import io.genkt.jsonrpc.JsonRpcSuccessResponse
-import io.genkt.jsonrpc.RequestId
-import io.genkt.jsonrpc.asJsonRpcClientTransport
-import io.genkt.jsonrpc.asJsonRpcServerTransport
-import io.genkt.jsonrpc.asJsonTransport
+import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
-import io.genkt.jsonrpc.server.interceptRequestHandler
-import io.genkt.jsonrpc.server.intercepted
+import io.genkt.jsonrpc.server.intercept
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class InterceptionTest {
     @Test
-    fun `should intercept server correctly`() {
-        CoroutineScope(EmptyCoroutineContext).launch {
-            val (clientTransport, serverTransport) = InMemoryTransport<String>().run {
-                (first.asJsonTransport().asJsonRpcClientTransport()) to (second.asJsonTransport()
-                    .asJsonRpcServerTransport())
-            }
+    fun `should intercept server correctly`() = runTest {
+        withContext(Dispatchers.Default) {
+            val (clientTransport, serverTransport) = InMemoryTransport<JsonElement>()
             val client = JsonRpcClient(
-                clientTransport,
+                clientTransport.asJsonRpcClientTransport(),
             )
             val server = JsonRpcServer(
-                serverTransport,
+                serverTransport.asJsonRpcServerTransport(),
                 { request ->
                     JsonRpcSuccessResponse(
                         id = request.id,
@@ -43,9 +36,9 @@ class InterceptionTest {
                     )
                 },
                 {}
-            ).intercepted {
-                interceptRequestHandler {
-                    return@interceptRequestHandler { request ->
+            ).intercept {
+                requestHandlerInterceptor += { oldHandler ->
+                    { request ->
                         JsonRpcSuccessResponse(
                             id = request.id,
                             result = JsonRpc.json.encodeToJsonElement(String.serializer(), "World"),
@@ -54,51 +47,60 @@ class InterceptionTest {
                 }
             }
             server.start()
+            client.start()
             val response = client.sendRequest(
                 id = RequestId.NumberId(1),
                 method = "test",
                 params = JsonNull,
             )
             assertEquals("World", response.result.jsonPrimitive.content)
+            client.close()
+            server.close()
         }
     }
 
+
     @Test
-    fun `should intercept client correctly`() {
-        CoroutineScope(EmptyCoroutineContext).launch {
-            val (clientTransport, serverTransport) = InMemoryTransport<String>().run {
-                (first.asJsonTransport().asJsonRpcClientTransport()) to (second.asJsonTransport()
-                    .asJsonRpcServerTransport())
+    fun `should intercept client correctly`() = runTest {
+        withContext(Dispatchers.Default + Job()) {
+            val (clientTransport, serverTransport) = InMemoryTransport<JsonElement>()
+            val client = JsonRpcClient(
+                clientTransport.asJsonRpcClientTransport(),
+                {},
+                CoroutineName("Client")
+            ).intercept {
+                requestInterceptor += { oldHandler ->
+                    { request ->
+                        JsonRpcSuccessResponse(
+                            id = request.id,
+                            result = JsonRpc.json.encodeToJsonElement(String.serializer(), "World"),
+                        )
+                    }
+                }
             }
-            JsonRpcServer(
-                serverTransport,
+            val server = JsonRpcServer(
+                serverTransport.asJsonRpcServerTransport(),
                 { request ->
                     JsonRpcSuccessResponse(
                         id = request.id,
                         result = JsonRpc.json.encodeToJsonElement(String.serializer(), "Hello"),
                     )
                 },
-                {}
-            ).start()
-            val client = JsonRpcClient(
-                clientTransport,
-            ).intercepted {
-                interceptRequest { sendFunction ->
-                    { request ->
-                        val response = sendFunction(request)
-                        JsonRpcSuccessResponse(
-                            id = response.id,
-                            result = JsonRpc.json.encodeToJsonElement(String.serializer(), "World"),
-                        )
-                    }
-                }
-            }
+                {},
+                {},
+                CoroutineName("Server")
+            )
+            server.start()
+            client.start()
             val response = client.sendRequest(
                 id = RequestId.NumberId(1),
                 method = "test",
                 params = JsonNull,
             )
             assertEquals("World", response.result.jsonPrimitive.content)
+            client.close()
+            server.close()
+            println("Test finished")
         }
     }
 }

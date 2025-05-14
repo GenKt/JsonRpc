@@ -13,7 +13,7 @@ public class JsonRpcServerInterceptor(
     public val additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : Interceptor<JsonRpcServer> {
     override fun invoke(server: JsonRpcServer): JsonRpcServer = InterceptedJsonRpcServer(server, this)
-    public class Builder {
+    public class Builder: GenericInterceptorScope {
         public var transportInterceptor: Interceptor<JsonRpcServerTransport> = { it }
         public var requestHandlerInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage> = { it }
         public var notificationHandlerInterceptor: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it }
@@ -36,10 +36,6 @@ public fun JsonRpcServerInterceptor.Builder.build(): JsonRpcServerInterceptor =
         additionalCoroutineContext,
     )
 
-public fun JsonRpcServerInterceptor.Builder.interceptRequestHandler(value: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage>) {
-    requestHandlerInterceptor = value
-}
-
 @Suppress("FunctionName")
 public inline fun JsonRpcServerInterceptor.Builder.CustomErrorResponse(
     crossinline generateErrorResponse: suspend (Throwable) -> JsonRpcServerSingleMessage
@@ -54,10 +50,10 @@ public inline fun JsonRpcServerInterceptor.Builder.CustomErrorResponse(
         }
     }
 
-public fun JsonRpcServer.intercept(
+public fun JsonRpcServer.interceptWith(
     interceptor: JsonRpcServerInterceptor
 ): JsonRpcServer = interceptor(this)
 
-public fun JsonRpcServer.intercepted(
+public fun JsonRpcServer.intercept(
     buildAction: JsonRpcServerInterceptor.Builder.() -> Unit
-) = intercept(JsonRpcServerInterceptor(buildAction))
+) = interceptWith(JsonRpcServerInterceptor(buildAction))
