@@ -51,6 +51,7 @@ suspend fun testJsonTransport(
         },
         errorHandler = { serverErrorChannel.send(it) }
     )
+    server.start()
     val client = JsonRpcClient(
         transport = clientTransport,
     )
