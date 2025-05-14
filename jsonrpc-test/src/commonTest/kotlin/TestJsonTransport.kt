@@ -19,6 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 suspend fun testJsonTransport(
     transportPair: Pair<JsonTransport, JsonTransport>
 ) {
+    println("testJsonTransport")
     val clientTransport = transportPair.first.asJsonRpcClientTransport()
     val serverTransport = transportPair.second.asJsonRpcServerTransport()
     val receivedNotificationChannel = Channel<JsonRpcNotification>()
@@ -48,6 +49,8 @@ suspend fun testJsonTransport(
     ).intercept {
         requestInterceptor = TimeOut(1.seconds)
     }
+    client.start()
+    println("Client and Server started")
 
     val response = client.sendRequest(
         id = RequestId.NumberId(1),
@@ -56,7 +59,7 @@ suspend fun testJsonTransport(
     )
     assertEquals(response.id, RequestId.NumberId(1))
     assertEquals("Method: test", response.result.jsonPrimitive.content)
-
+    println("Response test received")
     val notification = buildJsonObject {
         put("type", "event")
     }
@@ -65,7 +68,7 @@ suspend fun testJsonTransport(
         params = notification
     )
     assertEquals(receivedNotificationChannel.receive().params, notification)
-
+    println("Notification received")
     assertFails {
         client.sendRequest(
             id = RequestId.NumberId(2),
@@ -77,7 +80,7 @@ suspend fun testJsonTransport(
         serverErrorChannel.receive().message,
         "Params cannot be null"
     )
-
+    println("Null Error received")
     client.sendNotification(
         method = "notify",
         params = null
@@ -86,7 +89,7 @@ suspend fun testJsonTransport(
         serverErrorChannel.receive().message,
         "Params cannot be null"
     )
-
+    println("Null Error of notification received")
     // Send a request from the client and expect a timeout
     val exception = assertFails {
         client.sendRequest(
@@ -98,10 +101,12 @@ suspend fun testJsonTransport(
 
     // Verify the exception is a JsonRpcTimeoutException
     assertIs<TimeoutCancellationException>(exception)
-
+    println("Timeout exception received")
 
     server.close()
     client.close()
+
+    println("Client and Server closed")
     assertFails {
         client.sendRequest(
             id = RequestId.NumberId(4),
@@ -109,4 +114,5 @@ suspend fun testJsonTransport(
             params = JsonPrimitive("test")
         )
     }
+    println("Client closed, request failed as expected")
 }
