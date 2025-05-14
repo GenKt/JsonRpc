@@ -10,6 +10,7 @@ import io.genkt.jsonrpc.JsonRpcServerMessage
 import io.genkt.jsonrpc.JsonRpcServerTransport
 import io.genkt.jsonrpc.sendOrThrow
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.cancellable
 import kotlinx.coroutines.launch
@@ -23,7 +24,7 @@ internal class JsonRpcServerImpl(
     override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
 ) : JsonRpcServer {
     private val coroutineScope: CoroutineScope = transport.coroutineScope
-    private val receiveJob = coroutineScope.launch {
+    private val receiveJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
         transport.receiveFlow.cancellable()
             .collect { result ->
                 result.onSuccess {
@@ -32,6 +33,10 @@ internal class JsonRpcServerImpl(
                     errorHandler(it)
                 }
             }
+    }
+
+    override fun start() {
+        receiveJob.start()
     }
 
     private fun CoroutineScope.handleMessageSafe(request: JsonRpcClientMessage) {
