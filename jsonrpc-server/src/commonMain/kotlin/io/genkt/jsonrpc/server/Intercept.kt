@@ -1,13 +1,6 @@
 package io.genkt.jsonrpc.server
 
-import io.genkt.jsonrpc.Interceptor
-import io.genkt.jsonrpc.JsonRpcClientMessage
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcRequest
-import io.genkt.jsonrpc.JsonRpcServerMessage
-import io.genkt.jsonrpc.JsonRpcServerTransport
-import io.genkt.jsonrpc.TransportInterceptor
-import io.genkt.jsonrpc.build
+import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -18,7 +11,7 @@ public class JsonRpcServerInterceptor(
     public val interceptNotificationHandler: Interceptor<suspend (JsonRpcNotification) -> Unit>,
     public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit>,
     public val additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
-): Interceptor<JsonRpcServer> {
+) : Interceptor<JsonRpcServer> {
     override fun invoke(server: JsonRpcServer): JsonRpcServer = InterceptedJsonRpcServer(server, this)
     public class Builder {
         public var transportInterceptor: Interceptor<JsonRpcServerTransport> = { it }
@@ -29,17 +22,29 @@ public class JsonRpcServerInterceptor(
     }
 }
 
-public fun JsonRpcServerInterceptor.Builder.build(): JsonRpcServerInterceptor
-    = JsonRpcServerInterceptor(
-    transportInterceptor,
-    requestHandlerInterceptor,
-    notificationHandlerInterceptor,
-    errorHandlerInterceptor,
-    additionalCoroutineContext,
+public fun JsonRpcServerInterceptor.Builder.build(): JsonRpcServerInterceptor =
+    JsonRpcServerInterceptor(
+        transportInterceptor,
+        requestHandlerInterceptor,
+        notificationHandlerInterceptor,
+        errorHandlerInterceptor,
+        additionalCoroutineContext,
     )
 
 public fun JsonRpcServerInterceptor.Builder.interceptRequestHandler(value: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerMessage>) {
     requestHandlerInterceptor = value
+}
+
+public fun JsonRpcServerInterceptor.Builder.customErrorResponse(value: suspend (Throwable) -> JsonRpcServerSingleMessage) {
+    requestHandlerInterceptor = { requestHandler ->
+        { request ->
+            try {
+                requestHandler(request)
+            } catch (e: Throwable) {
+                value(e)
+            }
+        }
+    }
 }
 
 public fun JsonRpcServerInterceptor.Builder.interceptNotificationHandler(value: Interceptor<suspend (JsonRpcNotification) -> Unit>) {
