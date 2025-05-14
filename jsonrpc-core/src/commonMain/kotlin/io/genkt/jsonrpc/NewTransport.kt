@@ -5,7 +5,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -27,13 +26,10 @@ public fun SendAction<*>.commit() {
 public fun SendAction<*>.fail(t: Throwable) {
     completion.resumeWithException(t)
 }
-public typealias SafeFlowCollector<T> = FlowCollector<SendAction<T>>
-public typealias SafeChannel<T> = Channel<SendAction<T>>
-public typealias SafeSendChannel<T> = SendChannel<SendAction<T>>
 
 public typealias SafeFlow<T> = Flow<SendAction<T>>
 
-public suspend fun <T> SafeSendChannel<T>.safeSend(
+public suspend fun <T> SendChannel<SendAction<T>>.safeSend(
     value: T,
 ) {
     val deferred = CompletableDeferred<Result<Unit>>()
@@ -57,13 +53,14 @@ public suspend fun main(): Unit = coroutineScope {
                 }
             }
         }
-        val newSendChannel = channel.forwarded(CoroutineScope(CoroutineName("Forward"))) { it: SafeFlow<Int> ->
-            it.map {
-                println("Mapping: ${it.value} in ${currentCoroutineContext()[CoroutineName]}")
-                it.map { it }
-            }.flowOn(CoroutineName("MapFrom"))
-                .onEach { println("After flowOn with ${it.value} in ${currentCoroutineContext()[CoroutineName]}") }
-        }
+        val newSendChannel =
+            channel.forwarded(CoroutineScope(CoroutineName("Forward"))) { upStream: Flow<SendAction<Int>> ->
+                upStream.map {
+                    println("Mapping: ${it.value} to ${it.value + 1} in ${currentCoroutineContext()[CoroutineName]}")
+                    it.map { it + 1 }
+                }.flowOn(CoroutineName("MapFrom"))
+                    .onEach { println("After flowOn with ${it.value} in ${currentCoroutineContext()[CoroutineName]}") }
+            }
         withContext(CoroutineName("Emitter")) {
             for (i in 1..10) {
                 try {
