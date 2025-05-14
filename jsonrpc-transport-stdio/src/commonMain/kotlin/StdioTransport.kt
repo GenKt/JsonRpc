@@ -3,8 +3,7 @@ package io.github.genkt.jsonrpc.transport.stdio
 import io.genkt.jsonrpc.SendAction
 import io.genkt.jsonrpc.StringTransport
 import io.genkt.jsonrpc.Transport
-import io.genkt.jsonrpc.commit
-import io.genkt.jsonrpc.resume
+import io.genkt.jsonrpc.completeCatchingSuspend
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
@@ -23,12 +22,8 @@ public fun CoroutineScope.StdioTransport(): StringTransport {
     val output = Channel<SendAction<String>>()
     val outputJob = launch {
         while (currentCoroutineContext().isActive) {
-            output.consumeEach {
-                it.resume(
-                    runCatching {
-                        print(it.value)
-                    }
-                )
+            output.consumeEach { sendAction ->
+                sendAction.completeCatchingSuspend { print(it) }
             }
         }
     }

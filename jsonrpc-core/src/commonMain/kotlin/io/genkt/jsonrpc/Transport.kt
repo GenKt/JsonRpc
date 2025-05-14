@@ -8,11 +8,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.JsonElement
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.startCoroutine
+import kotlin.coroutines.*
 import kotlin.jvm.JvmName
 
 /**
@@ -47,8 +43,20 @@ public fun <T, R> SendAction<T>.mapOrThrow(
     }
 }
 
-public fun SendAction<*>.resume(result: Result<Unit>) {
+public fun SendAction<*>.complete(result: Result<Unit>) {
     completion.resumeWith(result)
+}
+
+public inline fun <T> SendAction<T>.completeCatching(
+    crossinline consumer: (T) -> Unit,
+) {
+    complete(runCatching { consumer(value) })
+}
+
+public suspend inline fun <T> SendAction<T>.completeCatchingSuspend(
+    crossinline consumer: suspend (T) -> Unit,
+) {
+    complete(runCatching { consumer(value) })
 }
 
 public fun SendAction<*>.commit() {

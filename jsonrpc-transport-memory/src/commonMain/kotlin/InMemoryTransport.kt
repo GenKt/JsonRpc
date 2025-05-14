@@ -2,8 +2,7 @@ package io.github.genkt.jsonrpc.transport.memory
 
 import io.genkt.jsonrpc.SendAction
 import io.genkt.jsonrpc.Transport
-import io.genkt.jsonrpc.commit
-import io.genkt.jsonrpc.resume
+import io.genkt.jsonrpc.completeCatchingSuspend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
@@ -30,21 +29,13 @@ public fun <T> CoroutineScope.InMemoryTransport(
     }
 
     launch {
-        channelIn1.consumeAsFlow().collect {
-            it.resume(
-                runCatching {
-                    channelOut2.send(Result.success(it.value))
-                }
-            )
+        channelIn1.consumeAsFlow().collect { sendAction ->
+            sendAction.completeCatchingSuspend { channelOut2.send(Result.success(it)) }
         }
     }
     launch {
-        channelIn2.consumeAsFlow().collect {
-            it.resume(
-                runCatching {
-                    channelOut1.send(Result.success(it.value))
-                }
-            )
+        channelIn2.consumeAsFlow().collect { sendAction ->
+            sendAction.completeCatchingSuspend { channelOut1.send(Result.success(it)) }
         }
     }
 
