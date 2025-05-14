@@ -28,9 +28,8 @@ suspend fun testJsonTransport(
         onRequest = { request ->
             if (request.params == null)
                 throw IllegalArgumentException("Params cannot be null")
-            if (request.method == "timeout") {
-                delay(1.seconds)
-            }
+            if (request.method == "timeout")
+                delay(10.seconds)
             JsonRpcSuccessResponse(
                 id = request.id,
                 result = JsonPrimitive("Method: ${request.method}")
@@ -47,7 +46,7 @@ suspend fun testJsonTransport(
     val client = JsonRpcClient(
         transport = clientTransport,
     ).intercept {
-        requestInterceptor = TimeOut(100.milliseconds)
+        requestInterceptor = TimeOut(1.seconds)
     }
 
     val response = client.sendRequest(
