@@ -73,58 +73,17 @@ internal class InterceptedJsonRpcServer(
     private val delegate: JsonRpcServer,
     interceptor: JsonRpcServerInterceptor,
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
-) : JsonRpcServer by delegate {
-    override val transport = interceptor.interceptTransport(delegate.transport)
-    override val onRequest = interceptor.interceptRequestHandler(delegate.onRequest)
-    override val onNotification = interceptor.interceptNotificationHandler(delegate.onNotification)
-    override val errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler)
-    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(coroutineContext)
-
-    private val receiveJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
-        transport.receiveFlow.cancellable()
-            .collect { result ->
-                result.onSuccess {
-                    handleMessageSafe(it)
-                }.onFailure {
-                    errorHandler(it)
-                }
-            }
-    }
-
-    private fun CoroutineScope.handleMessageSafe(request: JsonRpcClientMessage) {
-        launch(receiveJob) {
-            when (request) {
-                is JsonRpcRequest -> onRequestSafe(request)
-                is JsonRpcNotification -> onNotificationSafe(request)
-                is JsonRpcClientMessageBatch -> request.messages.forEach { handleMessageSafe(it) }
-            }
-        }
-    }
-
-    private suspend fun CoroutineScope.onNotificationSafe(request: JsonRpcNotification) {
-        try {
-            onNotification(request)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            launch { errorHandler(e) }
-        }
-    }
-
-    private suspend fun CoroutineScope.onRequestSafe(request: JsonRpcRequest) {
-        val response = try {
-            onRequest(request)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            launch { errorHandler(e) }
-            fallbackFailResponse(request, e)
-        }
-        launch { transport.sendChannel.sendOrThrow(response) }
-    }
-
-    override fun start() {
-        receiveJob.start()
+) : JsonRpcServer by JsonRpcServerImpl(
+    transport = interceptor.interceptTransport(delegate.transport),
+    onRequest = interceptor.interceptRequestHandler(delegate.onRequest),
+    onNotification = interceptor.interceptNotificationHandler(delegate.onNotification),
+    errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler),
+    coroutineContext = interceptor.additionalCoroutineContext + coroutineContext,
+) {
+    override fun close() {
+        coroutineScope.cancel()
+        delegate.close()
+        transport.close()
     }
 }
 
