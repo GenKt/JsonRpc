@@ -9,6 +9,6 @@ internal class LoggerImpl(
         transports.filter { transport ->
             message.level.greaterOrEqual(transport.level)
         }.forEach {
-            it.log(message.level, formatter(message))
+            it.log(formatter(message))
         }
 }

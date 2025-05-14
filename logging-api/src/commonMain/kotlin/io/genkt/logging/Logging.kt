@@ -24,7 +24,7 @@ public interface Logger {
 
 public interface Transport {
     public val level: Level
-    public fun log(level: Level, message: String)
+    public fun log(message: String)
 }
 
 public fun Logger(
