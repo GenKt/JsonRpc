@@ -1,11 +1,7 @@
 package io.genkt.jsonprc.client
 
 import io.genkt.jsonrpc.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.Continuation
@@ -38,15 +34,20 @@ internal class JsonRpcClientImpl(
         }.resumeWith(result)
     }
 
-    init {
-        coroutineScope.launch {
-            transport.receiveFlow.collect { result ->
-                    result.onSuccess { handleResponse(it) }.onFailure { errorHandler(it) }
-                }
+    private val listeningJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
+        transport.receiveFlow.collect { result ->
+            result.onSuccess { handleResponse(it) }.onFailure { errorHandler(it) }
         }
     }
 
+    override suspend fun start() {
+        listeningJob.start()
+    }
+
     override suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse {
+        if (!listeningJob.isActive && !listeningJob.isCompleted) {
+            start()
+        }
         return suspendCancellableCoroutine { completion ->
             coroutineScope.launch {
                 requestMapMutex.withLock { requestMap[request.id] = completion }
@@ -56,6 +57,9 @@ internal class JsonRpcClientImpl(
     }
 
     override suspend fun send(notification: JsonRpcNotification) {
+        if (!listeningJob.isActive && !listeningJob.isCompleted) {
+            start()
+        }
         transport.sendChannel.sendOrThrow(notification)
     }
 
@@ -66,29 +70,34 @@ internal class JsonRpcClientImpl(
 }
 
 internal class InterceptedJsonRpcClient(
-    private val delegate: JsonRpcClient,
+    source: JsonRpcClient,
     interceptor: JsonRpcClientInterceptor,
 ) : JsonRpcClient {
-    override val transport: JsonRpcClientTransport = interceptor.interceptTransport(delegate.transport)
-    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit =
-        interceptor.interceptErrorHandler(delegate.errorHandler)
-    override val coroutineScope: CoroutineScope = delegate.coroutineScope.newChild(interceptor.additionalCoroutineContext)
-    private val sendRequest = interceptor.interceptRequest(delegate::send)
-    private val sendNotification = interceptor.interceptNotification(delegate::send)
+    private val delegate = JsonRpcClientImpl(
+        transport = interceptor.interceptTransport(source.transport),
+        errorHandler = interceptor.interceptErrorHandler(source.errorHandler),
+        coroutineContext = interceptor.additionalCoroutineContext,
+    )
+    override val transport: JsonRpcClientTransport by delegate::transport
+    override val coroutineScope: CoroutineScope by delegate::coroutineScope
+    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit by delegate::errorHandler
+    private val interceptedSendRequest = interceptor.interceptRequest(delegate::send)
+    private val interceptedSendNotification = interceptor.interceptNotification(delegate::send)
+
+    override suspend fun start() {
+        delegate.start()
+    }
 
     override suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse {
-        return sendRequest(request)
+        return interceptedSendRequest(request)
     }
 
     override suspend fun send(notification: JsonRpcNotification) {
-        sendNotification(notification)
+        interceptedSendNotification(notification)
     }
 
     override fun close() {
-        // TODO: check if this ordering is proper
-        coroutineScope.cancel()
         delegate.close()
-        transport.close()
     }
 }
 

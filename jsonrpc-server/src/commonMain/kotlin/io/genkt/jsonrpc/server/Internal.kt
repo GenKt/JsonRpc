@@ -72,13 +72,12 @@ internal class JsonRpcServerImpl(
 internal class InterceptedJsonRpcServer(
     private val delegate: JsonRpcServer,
     interceptor: JsonRpcServerInterceptor,
-    coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : JsonRpcServer by JsonRpcServerImpl(
     transport = interceptor.interceptTransport(delegate.transport),
     onRequest = interceptor.interceptRequestHandler(delegate.onRequest),
     onNotification = interceptor.interceptNotificationHandler(delegate.onNotification),
     errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler),
-    coroutineContext = interceptor.additionalCoroutineContext + coroutineContext,
+    coroutineContext = delegate.coroutineScope.coroutineContext + interceptor.additionalCoroutineContext,
 ) {
     override fun close() {
         // TODO: check if this ordering is proper

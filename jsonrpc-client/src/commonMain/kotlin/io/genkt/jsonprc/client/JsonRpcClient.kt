@@ -21,6 +21,7 @@ public interface JsonRpcClient : AutoCloseable {
     public val transport: JsonRpcClientTransport
     public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
     public val coroutineScope: CoroutineScope
+    public suspend fun start()
     public suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse
     public suspend fun send(notification: JsonRpcNotification)
 }
