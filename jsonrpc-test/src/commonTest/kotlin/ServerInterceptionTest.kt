@@ -51,6 +51,7 @@ class ServerInterceptionTest {
                     }
                 }
             }
+            server.start()
             val response = client.sendRequest(
                 id = RequestId.NumberId(1),
                 method = "test",
