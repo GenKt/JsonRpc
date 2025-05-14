@@ -12,19 +12,22 @@ import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.jsonrpc.server.interceptRequestHandler
 import io.genkt.jsonrpc.server.intercepted
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ServerInterceptionTest {
     @Test
-    fun `should intercept correctly`() = runTest {
-        withContext(Dispatchers.Default) {
+    fun `should intercept correctly`() {
+        CoroutineScope(EmptyCoroutineContext).launch {
             val (clientTransport, serverTransport) = InMemoryTransport<String>().run {
                 (first.asJsonTransport().asJsonRpcClientTransport()) to (second.asJsonTransport()
                     .asJsonRpcServerTransport())
