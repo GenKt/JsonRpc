@@ -36,8 +36,9 @@ internal class JsonRpcClientImpl(
 
     init {
         coroutineScope.launch {
-            transport.receiveFlow
-                .collect { handleResponse(it) }
+            transport.receiveFlow.collect { result ->
+                    result.onSuccess { handleResponse(it) }.onFailure { errorHandler(it) }
+                }
         }
     }
 
@@ -45,13 +46,13 @@ internal class JsonRpcClientImpl(
         return suspendCancellableCoroutine { completion ->
             coroutineScope.launch {
                 requestMapMutex.withLock { requestMap[request.id] = completion }
-                transport.sendChannel.send(request)
+                transport.sendChannel.sendOrThrow(request)
             }
         }
     }
 
     override suspend fun send(notification: JsonRpcNotification) {
-        transport.sendChannel.send(notification)
+        transport.sendChannel.sendOrThrow(notification)
     }
 
     override fun close() {

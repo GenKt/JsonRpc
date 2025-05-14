@@ -1,28 +1,77 @@
 package io.genkt.jsonrpc
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.JsonElement
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.startCoroutine
 
 /**
  * @property coroutineScope will be closed when the transport is closed.
  */
 public interface Transport<in Input, out Output> : AutoCloseable {
-    public val sendChannel: SendChannel<Input>
-    public val receiveFlow: Flow<Output>
+    public val sendChannel: SendChannel<SendAction<Input>>
+    public val receiveFlow: Flow<Result<Output>>
     public val coroutineScope: CoroutineScope
 }
 
 public interface SharedTransport<in Input, out Output> : Transport<Input, Output> {
-    public override val receiveFlow: SharedFlow<Output>
+    public override val receiveFlow: SharedFlow<Result<Output>>
+}
+
+public data class SendAction<out T>(
+    public val value: T,
+    public val completion: Continuation<Unit>,
+)
+
+public fun <T, R> SendAction<T>.mapOrThrow(
+    transform: (T) -> R,
+): SendAction<R> {
+    return try {
+        SendAction(
+            value = transform(value),
+            completion = completion,
+        )
+    } catch (e: Throwable) {
+        fail(e)
+        throw e
+    }
+}
+
+public fun SendAction<*>.resume(result: Result<Unit>) {
+    completion.resumeWith(result)
+}
+
+public fun SendAction<*>.commit() {
+    completion.resume(Unit)
+}
+
+public fun SendAction<*>.fail(t: Throwable) {
+    completion.resumeWithException(t)
+}
+
+public suspend fun <T> SendChannel<SendAction<T>>.sendOrThrow(
+    value: T,
+) {
+    val deferred = CompletableDeferred<Result<Unit>>()
+    suspendCancellableCoroutine { continuation ->
+        suspend { send(SendAction(value, continuation)) }
+            .startCoroutine(Continuation(EmptyCoroutineContext) { deferred.complete(it) })
+    }
+    deferred.await()
 }
 
 public fun <Input, Output> Transport(
-    sendChannel: SendChannel<Input>,
-    receiveFlow: Flow<Output>,
+    sendChannel: SendChannel<SendAction<Input>>,
+    receiveFlow: Flow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
 ): Transport<Input, Output> =
@@ -34,8 +83,8 @@ public fun <Input, Output> Transport(
     )
 
 public fun <Input, Output> SharedTransport(
-    sendChannel: SendChannel<Input>,
-    receiveFlow: SharedFlow<Output>,
+    sendChannel: SendChannel<SendAction<Input>>,
+    receiveFlow: SharedFlow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
 ): SharedTransport<Input, Output> =
@@ -63,6 +112,34 @@ public fun <T, R> SendChannel<R>.delegateInput(transform: (T) -> R): SendChannel
         transform = transform
     )
 
+public fun <T, R> SendChannel<SendAction<R>>.delegateInputCatching(
+    transform: (T) -> R
+): SendChannel<SendAction<T>> =
+    DelegatingSendChannel(
+        delegate = this,
+        transform = { it.mapOrThrow(transform) }
+    )
+
+internal inline fun <T, R> Flow<Result<T>>.mapCatching(
+    crossinline transform: suspend (T) -> R,
+): Flow<Result<R>> = map { result -> result.mapCatching { transform(it) } }
+
+public fun <T, R> Flow<SendAction<T>>.mapCatching(
+    transform: suspend (T) -> R,
+): Flow<SendAction<R>> =
+    transform { sendAction ->
+        runCatching { transform(sendAction.value) }
+            .onFailure { sendAction.fail(it) }
+            .onSuccess {
+                emit(
+                    SendAction(
+                        value = it,
+                        completion = sendAction.completion
+                    )
+                )
+            }
+    }
+
 public fun <T, R> SendChannel<R>.forwarded(
     coroutineScope: CoroutineScope,
     write: (Flow<T>) -> Flow<R>,
@@ -89,34 +166,42 @@ public typealias JsonRpcServerTransport = Transport<JsonRpcServerMessage, JsonRp
 
 public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
     Transport(
-        sendChannel = sendChannel.delegateInput {
+        sendChannel = sendChannel.delegateInputCatching {
             JsonRpc.json.encodeToJsonElement(
                 JsonRpcClientMessageSerializer,
                 it
             )
         },
-        receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it) },
+        receiveFlow = receiveFlow.mapCatching {
+            JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it)
+        },
         coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
 public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
     Transport(
-        sendChannel = sendChannel.delegateInput {
+        sendChannel = sendChannel.delegateInputCatching {
             JsonRpc.json.encodeToJsonElement(
                 JsonRpcServerMessageSerializer,
                 it
             )
         },
-        receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it) },
+        receiveFlow = receiveFlow.mapCatching {
+            JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it)
+        },
         coroutineScope = this.coroutineScope,
         onClose = this::close
     )
 
 public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
     Transport(
-        sendChannel = sendChannel.delegateInput { JsonRpc.json.encodeToJsonElement(JsonRpcMessageSerializer, it) },
-        receiveFlow = receiveFlow.map { JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it) },
+        sendChannel = sendChannel.delegateInputCatching {
+            JsonRpc.json.encodeToJsonElement(JsonRpcMessageSerializer, it)
+        },
+        receiveFlow = receiveFlow.mapCatching {
+            JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it)
+        },
         coroutineScope = this.coroutineScope,
         onClose = this::close
     )
@@ -138,13 +223,15 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
     )
 
 public fun StringTransport.asJsonTransport(
-    parse: Interceptor<Flow<String>> = { it },
-    write: Interceptor<Flow<String>> = { it },
+    parse: Interceptor<Flow<Result<String>>> = { it },
+    write: Interceptor<Flow<SendAction<String>>> = { it },
 ): JsonTransport =
     Transport(
-        sendChannel = sendChannel.forwarded(coroutineScope, write)
-            .delegateInput { JsonRpc.json.encodeToString(JsonElement.serializer(), it) },
-        receiveFlow = parse(receiveFlow).map { JsonRpc.json.parseToJsonElement(it) },
+        sendChannel = sendChannel.forwarded(coroutineScope) { upStream: Flow<SendAction<JsonElement>> ->
+            upStream.mapCatching { JsonRpc.json.encodeToString(JsonElement.serializer(), it) }
+                .let(write)
+        },
+        receiveFlow = parse(receiveFlow).mapCatching { JsonRpc.json.parseToJsonElement(it) },
         coroutineScope = this.coroutineScope,
         onClose = this::close
     )

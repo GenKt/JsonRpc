@@ -1,17 +1,12 @@
 package io.genkt.jsonrpc.server
 
-import io.genkt.jsonrpc.InternalError
-import io.genkt.jsonrpc.JsonRpcClientMessage
-import io.genkt.jsonrpc.JsonRpcClientMessageBatch
-import io.genkt.jsonrpc.JsonRpcFailResponse
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcRequest
-import io.genkt.jsonrpc.JsonRpcServerMessage
-import io.genkt.jsonrpc.JsonRpcServerTransport
-import kotlinx.coroutines.*
+import io.genkt.jsonrpc.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.cancellable
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 
 public fun CoroutineScope.JsonRpcServer(
@@ -36,7 +31,10 @@ public class JsonRpcServer(
 ) : AutoCloseable {
     private val receiveJob = coroutineScope.launch {
         transport.receiveFlow.cancellable()
-            .collect { handleMessageSafe(it) }
+            .collect { result ->
+                result.onSuccess { handleMessageSafe(it) }
+                    .onFailure { errorHandler(it) }
+            }
     }
 
     private fun CoroutineScope.handleMessageSafe(request: JsonRpcClientMessage) {
@@ -75,7 +73,7 @@ public class JsonRpcServer(
                 )
             )
         }
-        launch { transport.sendChannel.send(response) }
+        launch { transport.sendChannel.sendOrThrow(response) }
     }
 
     override fun close() {
