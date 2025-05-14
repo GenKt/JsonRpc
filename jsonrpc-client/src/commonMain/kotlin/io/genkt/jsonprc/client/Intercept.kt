@@ -41,7 +41,7 @@ public fun JsonRpcClientInterceptor.Builder.interceptTransport(value: Intercepto
     transportInterceptor = value
 }
 
-public fun JsonRpcClientInterceptor.Builder.interceptTransport(buildAction: TransportInterceptor.Builder<JsonRpcClientMessage, JsonRpcServerMessage>.() -> Unit) {
+public fun JsonRpcClientInterceptor.Builder.buildTransportInterceptor(buildAction: TransportInterceptor.Builder<JsonRpcClientMessage, JsonRpcServerMessage>.() -> Unit) {
     transportInterceptor = TransportInterceptor.Builder<JsonRpcClientMessage, JsonRpcServerMessage>()
         .apply(buildAction)
         .build()
