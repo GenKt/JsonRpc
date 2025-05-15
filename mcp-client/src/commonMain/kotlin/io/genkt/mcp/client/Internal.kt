@@ -26,6 +26,7 @@ public class McpClientImpl(
     private val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
+    private var isActive = false
     private val requestMutex = Mutex()
     private val requestMap = mutableMapOf<RequestId, CancellableContinuation<JsonElement>>()
     private val coroutineScope = CoroutineScope(coroutineContext)
@@ -73,11 +74,15 @@ public class McpClientImpl(
         {}
     )
     private val jsonRpcClient = JsonRpcClient(transportPair.first)
+
     override suspend fun start() {
         jsonRpcServer.start()
     }
 
     override suspend fun listPrompt(request: McpPrompt.ListRequest): McpPrompt.ListResponse {
+        if (!isActive) {
+            start()
+        }
         val rpcRequest = JsonRpcRequest(
             id = requestIdProvider(),
             method = McpMethods.Prompts.List,
