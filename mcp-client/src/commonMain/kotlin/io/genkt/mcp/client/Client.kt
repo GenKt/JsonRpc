@@ -14,7 +14,7 @@ public interface McpClient {
     public val onNotification: suspend (McpNotification) -> Unit
 
     @McpClientInterceptionApi
-    public suspend fun nextRequestId(): RequestId
+    public fun nextRequestId(): RequestId
 
     @McpClientInterceptionApi
     public suspend fun sendJsonRpcRequest(request: JsonRpcRequest): JsonRpcSuccessResponse
