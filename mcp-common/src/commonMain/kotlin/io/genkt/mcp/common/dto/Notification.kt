@@ -23,4 +23,6 @@ public sealed interface McpNotification {
     public data class LogMessage(
         public val message: McpLogging.LogMessage,
     ): McpNotification
+
+    // TODO: Other Notification data classes
 }
