@@ -1,3 +1,4 @@
+@file:OptIn(InternalMcpClientApi::class)
 package io.genkt.mcp.client
 
 import io.genkt.jsonprc.client.JsonRpcClient
@@ -24,7 +25,7 @@ internal class McpClientImpl(
     override val onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
     override val onNotification: suspend (McpNotification) -> Unit,
     transport: JsonRpcTransport,
-    private val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
+    override val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
     private var isActive = false
@@ -32,7 +33,8 @@ internal class McpClientImpl(
     private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
     private val coroutineScope = transport.coroutineScope.newChild(additionalContext)
     private val transportPair = transport.shareAsClientAndServerIn()
-    private val jsonRpcServer = JsonRpcServer(
+    @property:InternalMcpClientApi
+    override val jsonRpcServer = JsonRpcServer(
         transportPair.second,
         { request ->
             val deferred = coroutineScope.async {
@@ -72,55 +74,11 @@ internal class McpClientImpl(
         },
         {}
     )
-    private val jsonRpcClient = JsonRpcClient(transportPair.first)
+    @property:InternalMcpClientApi
+    override val jsonRpcClient = JsonRpcClient(transportPair.first)
 
     override suspend fun start() {
         jsonRpcServer.start()
-    }
-
-    override suspend fun listPrompt(request: McpPrompt.ListRequest): McpPrompt.ListResponse {
-        if (!isActive) {
-            start()
-        }
-        val rpcRequest = JsonRpcRequest(
-            id = requestIdProvider(),
-            method = McpMethods.Prompts.List,
-            params = JsonRpc.json.encodeToJsonElement(McpPrompt.ListRequest.serializer(), request)
-        )
-        val response = jsonRpcClient.send(rpcRequest)
-        return response.result.let { JsonRpc.json.decodeFromJsonElement(McpPrompt.ListResponse.serializer(), it) }
-    }
-
-    override suspend fun getPrompt(request: McpPrompt.GetRequest): McpPrompt.GetResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun listResource(request: McpResource.ListRequest): McpResource.ListResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun readResource(request: McpResource.ReadRequest): McpResource.ReadResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun readResourceTemplate(): McpResource.ListTemplateResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun listTools(request: McpTool.ListRequest): McpTool.ListResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun callTool(request: McpTool.CallRequest): McpTool.CallResponse {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun getCompletion(request: McpCompletion.Request): McpCompletion.Response {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun setLoggingLevel(request: McpLogging.SetLevelRequest) {
-        TODO("Not yet implemented")
     }
 
     override suspend fun close() {
