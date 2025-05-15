@@ -1,6 +1,7 @@
 package io.genkt.jsonrpc
 
 import io.github.stream29.streamlin.globalCached
+import kotlinx.atomicfu.atomic
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -13,5 +14,10 @@ public object JsonRpc {
         isLenient = true
         encodeDefaults = true
         prettyPrint = false
+    }
+    @Suppress("FunctionName")
+    public fun NumberIdGenerator(from: Long = 0L, delta: Long = 1L): () -> RequestId.NumberId {
+        val id = atomic(from)
+        return { RequestId.NumberId(id.getAndAdd(delta)) }
     }
 }
