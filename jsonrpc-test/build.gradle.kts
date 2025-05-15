@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
+
 plugins {
     id("kotlin-multiplatform-full")
 }
@@ -15,4 +17,5 @@ kotlin {
             }
         }
     }
+    explicitApi = ExplicitApiMode.Disabled
 }

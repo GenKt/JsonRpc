@@ -50,3 +50,4 @@ replay_pid*
 .kotlin/
 
 .idea/
+/jsonrpc-test/src/commonMain/kotlin/Temp.kt
