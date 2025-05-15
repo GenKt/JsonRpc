@@ -8,6 +8,8 @@ kotlin {
         commonMain {
             dependencies {
                 api(project(":genkt-mcp-common"))
+                implementation(project(":genkt-jsonrpc-client"))
+                implementation(project(":genkt-jsonrpc-server"))
             }
         }
     }
