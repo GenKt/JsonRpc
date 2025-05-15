@@ -5,10 +5,11 @@ import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethods
 import io.genkt.mcp.common.dto.*
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
@@ -22,53 +23,51 @@ public class McpClientImpl(
     override val onRoot: suspend () -> McpRoot.ListResponse,
     override val onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
     override val onNotification: suspend (McpNotification) -> Unit,
-    transportPair: Pair<JsonRpcClientTransport, JsonRpcServerTransport>,
+    transport: JsonRpcTransport,
     private val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
     private var isActive = false
     private val requestMutex = Mutex()
-    private val requestMap = mutableMapOf<RequestId, CancellableContinuation<JsonElement>>()
-    private val coroutineScope = CoroutineScope(coroutineContext)
+    private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
+    private val coroutineScope = transport.coroutineScope.newChild(coroutineContext)
+    private val transportPair = transport.shareAsClientAndServerIn()
     private val jsonRpcServer = JsonRpcServer(
         transportPair.second,
         { request ->
-            val result = suspendCancellableCoroutine { continuation ->
+            val deferred = coroutineScope.async {
+                when (request.method) {
+                    McpMethods.Roots.List -> JsonRpc.json.encodeToJsonElement(
+                        McpRoot.ListResponse.serializer(),
+                        onRoot()
+                    )
+
+                    McpMethods.Sampling.CreateMessage ->
+                        JsonRpc.json.encodeToJsonElement(
+                            McpSampling.Response.serializer(), onSampling(
+                                JsonRpc.json.decodeFromJsonElement(
+                                    McpSampling.Request.serializer(),
+                                    request.params!!
+                                )
+                            )
+                        )
+
+                    else -> error("Unknown method: ${request.method}")
+                }
+            }
+            requestMutex.withLock {
+                requestMap[request.id] = deferred
+            }
+            deferred.invokeOnCompletion {
                 coroutineScope.launch {
                     requestMutex.withLock {
-                        requestMap[request.id] = continuation
-                    }
-                    try {
-                        val response = when (request.method) {
-                            McpMethods.Roots.List -> JsonRpc.json.encodeToJsonElement(
-                                McpRoot.ListResponse.serializer(),
-                                onRoot()
-                            )
-
-                            McpMethods.Sampling.CreateMessage ->
-                                JsonRpc.json.encodeToJsonElement(
-                                    McpSampling.Response.serializer(), onSampling(
-                                        JsonRpc.json.decodeFromJsonElement(
-                                            McpSampling.Request.serializer(),
-                                            request.params!!
-                                        )
-                                    )
-                                )
-
-                            else -> error("Unknown method: ${request.method}")
-                        }
-                        continuation.resumeWith(Result.success(response))
-                        requestMutex.withLock {
-                            requestMap.remove(request.id)
-                        }
-                    } catch (e: Throwable) {
-                        continuation.resumeWith(Result.failure(e))
+                        requestMap.remove(request.id)
                     }
                 }
             }
             JsonRpcSuccessResponse(
                 id = request.id,
-                result = result
+                result = deferred.await()
             )
         },
         {}
@@ -128,3 +127,6 @@ public class McpClientImpl(
         TODO("Not yet implemented")
     }
 }
+
+private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
+    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
