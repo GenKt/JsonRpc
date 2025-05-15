@@ -5,32 +5,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlin.jvm.JvmInline
 
 @Serializable
-public data class McpServerCapabilities(
-    val experimental: JsonObject? = null,
-    val logging: JsonObject? = null,
-    val prompts: PromptsCapability? = null,
-    val resources: ResourcesCapability? = null,
-    val tools: ToolsCapability? = null,
-    val completion: JsonObject? = null,
-) {
-    @Serializable
-    public data class PromptsCapability(
-        val listChanged: Boolean = false,
-    )
-
-    @Serializable
-    public data class ResourcesCapability(
-        val subscribe: Boolean = false,
-        val listChanged: Boolean = false,
-    )
-
-    @Serializable
-    public data class ToolsCapability(
-        val listChanged: Boolean = false,
-    )
-}
-
-@Serializable
 public data class McpPrompt(
     public val name: String,
     public val description: String,

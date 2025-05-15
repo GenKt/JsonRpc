@@ -1,20 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 import kotlin.jvm.JvmInline
-
-@Serializable
-public data class McpClientCapabilities(
-    public val sampling: JsonObject? = null,
-    public val roots: RootsCapability? = null,
-) {
-    @Serializable
-    public data class RootsCapability(
-        public val listChanged: Boolean = false,
-    )
-}
-
 
 @Serializable
 public data class McpRoot(
