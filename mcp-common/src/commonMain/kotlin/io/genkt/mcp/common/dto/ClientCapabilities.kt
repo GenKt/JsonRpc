@@ -46,6 +46,14 @@ public sealed interface McpSampling {
         public val content: Content,
     )
 
+    @Serializable
+    public data class Response(
+        public val role: String,
+        public val content: Content,
+        public val model: String,
+        public val stopReason: String? = null,
+    )
+
     @Serializable(with = McpSamplingContentSerializer::class)
     public sealed interface Content {
         @Serializable(with = McpSamplingTextContentSerializer::class)
