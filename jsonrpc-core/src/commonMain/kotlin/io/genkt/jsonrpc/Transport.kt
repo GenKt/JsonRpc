@@ -2,6 +2,7 @@ package io.genkt.jsonrpc
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
@@ -120,12 +121,13 @@ public fun <Input, Output> SharedTransport(
     )
 
 public fun <Input, Output> Transport<Input, Output>.sharedIn(
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
     started: SharingStarted = SharingStarted.Lazily,
     replay: Int = 0,
 ): SharedTransport<Input, Output> =
     SharedTransport(
         sendChannel = sendChannel,
-        receiveFlow = receiveFlow.shareIn(coroutineScope, started, replay),
+        receiveFlow = receiveFlow.shareIn(coroutineScope.newChild(coroutineContext), started, replay),
         coroutineScope = coroutineScope,
         onClose = this::close
     )
@@ -263,9 +265,13 @@ public fun StringTransport.asJsonTransport(
     )
 
 public fun JsonRpcTransport.shareAsClientAndServerIn(
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
     started: SharingStarted = SharingStarted.Lazily,
     replay: Int = 0,
 ): Pair<JsonRpcClientTransport, JsonRpcServerTransport> {
-    val shared = sharedIn(started, replay)
+    val shared = sharedIn(coroutineContext, started, replay)
     return shared.asJsonClientTransport() to shared.asJsonServerTransport()
 }
+
+private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
+    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
