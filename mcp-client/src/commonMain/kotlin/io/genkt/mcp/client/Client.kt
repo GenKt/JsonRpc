@@ -18,6 +18,7 @@ public interface McpClient {
     public suspend fun callTool(request: McpTool.CallRequest): McpTool.CallResponse
     public suspend fun getCompletion(request: McpCompletion.Request): McpCompletion.Response
     public suspend fun setLoggingLevel(request: McpLogging.SetLevelRequest)
+    public suspend fun start()
     public suspend fun close()
 }
 
