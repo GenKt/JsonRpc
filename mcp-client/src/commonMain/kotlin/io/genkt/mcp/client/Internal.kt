@@ -16,7 +16,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-public class McpClientImpl(
+internal class McpClientImpl(
     override val name: String,
     override val version: String,
     override val capabilities: McpClientCapabilities,
@@ -25,12 +25,12 @@ public class McpClientImpl(
     override val onNotification: suspend (McpNotification) -> Unit,
     transport: JsonRpcTransport,
     private val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
-    coroutineContext: CoroutineContext = EmptyCoroutineContext,
+    additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
     private var isActive = false
     private val requestMutex = Mutex()
     private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
-    private val coroutineScope = transport.coroutineScope.newChild(coroutineContext)
+    private val coroutineScope = transport.coroutineScope.newChild(additionalContext)
     private val transportPair = transport.shareAsClientAndServerIn()
     private val jsonRpcServer = JsonRpcServer(
         transportPair.second,
