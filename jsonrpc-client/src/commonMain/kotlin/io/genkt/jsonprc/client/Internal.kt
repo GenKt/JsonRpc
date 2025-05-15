@@ -70,7 +70,7 @@ internal class JsonRpcClientImpl(
 }
 
 internal class InterceptedJsonRpcClient(
-    source: JsonRpcClient,
+    val source: JsonRpcClient,
     interceptor: JsonRpcClientInterceptor,
 ) : JsonRpcClient {
     private val delegate = JsonRpcClientImpl(
@@ -98,6 +98,7 @@ internal class InterceptedJsonRpcClient(
 
     override fun close() {
         delegate.close()
+        source.close()
     }
 }
 
