@@ -70,7 +70,7 @@ internal class JsonRpcClientImpl(
 }
 
 internal class InterceptedJsonRpcClient(
-    source: JsonRpcClient,
+    val source: JsonRpcClient,
     interceptor: JsonRpcClientInterceptor,
 ) : JsonRpcClient {
     private val delegate = JsonRpcClientImpl(
@@ -97,7 +97,10 @@ internal class InterceptedJsonRpcClient(
     }
 
     override fun close() {
-        delegate.close()
+        // TODO: check if this ordering is proper
+        coroutineScope.cancel()
+        source.close()
+        transport.close()
     }
 }
 

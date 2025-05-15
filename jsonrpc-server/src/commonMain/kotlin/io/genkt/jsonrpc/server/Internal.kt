@@ -70,19 +70,19 @@ internal class JsonRpcServerImpl(
 }
 
 internal class InterceptedJsonRpcServer(
-    private val delegate: JsonRpcServer,
+    private val source: JsonRpcServer,
     interceptor: JsonRpcServerInterceptor,
 ) : JsonRpcServer by JsonRpcServerImpl(
-    transport = interceptor.interceptTransport(delegate.transport),
-    onRequest = interceptor.interceptRequestHandler(delegate.onRequest),
-    onNotification = interceptor.interceptNotificationHandler(delegate.onNotification),
-    errorHandler = interceptor.interceptErrorHandler(delegate.errorHandler),
-    coroutineContext = delegate.coroutineScope.coroutineContext + interceptor.additionalCoroutineContext,
+    transport = interceptor.interceptTransport(source.transport),
+    onRequest = interceptor.interceptRequestHandler(source.onRequest),
+    onNotification = interceptor.interceptNotificationHandler(source.onNotification),
+    errorHandler = interceptor.interceptErrorHandler(source.errorHandler),
+    coroutineContext = source.coroutineScope.coroutineContext + interceptor.additionalCoroutineContext,
 ) {
     override fun close() {
         // TODO: check if this ordering is proper
         coroutineScope.cancel()
-        delegate.close()
+        source.close()
         transport.close()
     }
 }
