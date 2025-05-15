@@ -1,7 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import kotlin.jvm.JvmInline
 
 public sealed interface McpCompletion {
@@ -17,12 +17,13 @@ public sealed interface McpCompletion {
         @JvmInline
         public value class Prompt(
             public val name: String,
-        ): Reference
+        ) : Reference
+
         @Serializable(with = McpCompletionResourceReferenceSerializer::class)
         @JvmInline
         public value class Resource(
             public val uri: String,
-        ): Reference
+        ) : Reference
     }
 
     @Serializable
@@ -46,14 +47,20 @@ public sealed interface McpCompletion {
 
 public sealed interface McpLogging {
     @Serializable
+    @Suppress("EnumEntryName")
+    public enum class Level {
+        debug, info, notice, warning, error, critical, alert, emergency
+    }
+
+    @Serializable
     public data class SetLevelRequest(
-        public val level: String,
+        public val level: Level,
     )
 
     @Serializable
     public data class LogMessage(
-        public val level: String,
+        public val level: Level,
         public val logger: String,
-        public val data: JsonObject,
+        public val data: JsonElement,
     )
 }
