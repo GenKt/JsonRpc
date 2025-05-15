@@ -97,8 +97,10 @@ internal class InterceptedJsonRpcClient(
     }
 
     override fun close() {
-        delegate.close()
+        // TODO: check if this ordering is proper
+        coroutineScope.cancel()
         source.close()
+        transport.close()
     }
 }
 
