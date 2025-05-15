@@ -173,7 +173,7 @@ public data class McpTool(
     @Serializable
     public data class CallRequest(
         public val name: String,
-        public val arguments: Map<String, String>
+        public val arguments: JsonObject
     )
 
     @Serializable
