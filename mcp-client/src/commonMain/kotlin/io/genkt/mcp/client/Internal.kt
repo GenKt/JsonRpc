@@ -1,6 +1,19 @@
 package io.genkt.mcp.client
 
+import io.genkt.jsonprc.client.JsonRpcClient
+import io.genkt.jsonrpc.*
+import io.genkt.jsonrpc.server.JsonRpcServer
+import io.genkt.mcp.common.McpMethods
 import io.genkt.mcp.common.dto.*
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 public class McpClientImpl(
     override val name: String,
@@ -9,12 +22,69 @@ public class McpClientImpl(
     override val onRoot: suspend () -> McpRoot.ListResponse,
     override val onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
     override val onNotification: suspend (McpNotification) -> Unit,
-): McpClient {
+    transportPair: Pair<JsonRpcClientTransport, JsonRpcServerTransport>,
+    private val requestIdProvider: () -> RequestId = { RequestId.NumberId(1) },
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
+) : McpClient {
+    private val requestMutex = Mutex()
+    private val requestMap = mutableMapOf<RequestId, CancellableContinuation<JsonElement>>()
+    private val coroutineScope = CoroutineScope(coroutineContext)
+    private val jsonRpcServer = JsonRpcServer(
+        transportPair.second,
+        { request ->
+            val result = suspendCancellableCoroutine { continuation ->
+                coroutineScope.launch {
+                    requestMutex.withLock {
+                        requestMap[request.id] = continuation
+                    }
+                    try {
+                        val response = when (request.method) {
+                            McpMethods.Roots.List -> JsonRpc.json.encodeToJsonElement(
+                                McpRoot.ListResponse.serializer(),
+                                onRoot()
+                            )
+
+                            McpMethods.Sampling.CreateMessage ->
+                                JsonRpc.json.encodeToJsonElement(
+                                    McpSampling.Response.serializer(), onSampling(
+                                        JsonRpc.json.decodeFromJsonElement(
+                                            McpSampling.Request.serializer(),
+                                            request.params!!
+                                        )
+                                    )
+                                )
+
+                            else -> error("Unknown method: ${request.method}")
+                        }
+                        continuation.resumeWith(Result.success(response))
+                        requestMutex.withLock {
+                            requestMap.remove(request.id)
+                        }
+                    } catch (e: Throwable) {
+                        continuation.resumeWith(Result.failure(e))
+                    }
+                }
+            }
+            JsonRpcSuccessResponse(
+                id = request.id,
+                result = result
+            )
+        },
+        {}
+    )
+    private val jsonRpcClient = JsonRpcClient(transportPair.first)
     override suspend fun start() {
-        TODO("Not yet implemented")
+        jsonRpcServer.start()
     }
+
     override suspend fun listPrompt(request: McpPrompt.ListRequest): McpPrompt.ListResponse {
-        TODO("Not yet implemented")
+        val rpcRequest = JsonRpcRequest(
+            id = requestIdProvider(),
+            method = McpMethods.Prompts.List,
+            params = JsonRpc.json.encodeToJsonElement(McpPrompt.ListRequest.serializer(), request)
+        )
+        val response = jsonRpcClient.send(rpcRequest)
+        return response.result.let { JsonRpc.json.decodeFromJsonElement(McpPrompt.ListResponse.serializer(), it) }
     }
 
     override suspend fun getPrompt(request: McpPrompt.GetRequest): McpPrompt.GetResponse {
