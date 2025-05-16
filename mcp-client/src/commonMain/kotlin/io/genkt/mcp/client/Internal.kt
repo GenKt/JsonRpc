@@ -113,7 +113,7 @@ internal class InterceptedMcpClient(
     transport = interceptor.interceptTransport(source.transport),
     requestIdGenerator = interceptor.interceptRequestIdGenerator(source.requestIdGenerator)
 ) {
-    override suspend fun <T: Any?, R: Any?> call(mcpCall: McpClient.Call<T, R>): R {
+    override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): R {
         return interceptor.interceptCall(source::call)(mcpCall) as R
     }
     override suspend fun start() {
