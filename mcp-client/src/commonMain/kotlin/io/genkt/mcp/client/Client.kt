@@ -1,6 +1,8 @@
 package io.genkt.mcp.client
 
+import io.genkt.jsonprc.client.JsonRpcClient
 import io.genkt.jsonrpc.*
+import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethods
 import io.genkt.mcp.common.dto.*
 import kotlinx.serialization.DeserializationStrategy
@@ -36,6 +38,11 @@ public interface McpClient {
     public val onRoot: suspend () -> McpRoot.ListResponse
     public val onSampling: suspend (McpSampling.Request) -> McpSampling.Response
     public val onNotification: suspend (McpNotification) -> Unit
+    public val transport: JsonRpcTransport
+    public val requestIdGenerator: () -> RequestId
+
+    public val jsonRpcServer: JsonRpcServer
+    public val jsonRpcClient: JsonRpcClient
 
     @McpClientInterceptionApi
     public fun nextRequestId(): RequestId

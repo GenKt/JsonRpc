@@ -24,15 +24,15 @@ internal class McpClientImpl(
     override val onRoot: suspend () -> McpRoot.ListResponse,
     override val onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
     override val onNotification: suspend (McpNotification) -> Unit,
-    val transport: JsonRpcTransport,
-    val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    override val transport: JsonRpcTransport,
+    override val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
     private val requestMutex = Mutex()
     private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
     private val coroutineScope = transport.coroutineScope.newChild(additionalContext)
     private val transportPair = transport.shareAsClientAndServerIn()
-    val jsonRpcServer = JsonRpcServer(
+    override val jsonRpcServer = JsonRpcServer(
         transportPair.second,
         { request ->
             val deferred = coroutineScope.async {
@@ -72,7 +72,7 @@ internal class McpClientImpl(
         },
         {}
     )
-    val jsonRpcClient = JsonRpcClient(transportPair.first)
+    override val jsonRpcClient = JsonRpcClient(transportPair.first)
 
     @McpClientInterceptionApi
     override fun nextRequestId(): RequestId = requestIdGenerator()
@@ -99,6 +99,40 @@ internal class McpClientImpl(
         coroutineScope.cancel()
         transport.close()
     }
+}
+
+internal class InterceptedMcpClient(
+    private val source: McpClient,
+    private val interceptor: McpClientInterceptor,
+): McpClient by McpClientImpl(
+    info = interceptor.interceptInfo(source.info),
+    capabilities = interceptor.interceptCapabilities(source.capabilities),
+    onRoot = interceptor.interceptRootHandler(source.onRoot),
+    onSampling = interceptor.interceptSamplingHandler(source.onSampling),
+    onNotification = interceptor.interceptNotificationHandler(source.onNotification),
+    transport = interceptor.interceptTransport(source.transport),
+    requestIdGenerator = interceptor.interceptRequestIdGenerator(source.requestIdGenerator)
+) {
+    override suspend fun <T: Any?, R: Any?> call(mcpCall: McpClient.Call<T, R>): R {
+        return interceptor.interceptCall(source::call)(mcpCall) as R
+    }
+    override suspend fun start() {
+        interceptor.interceptStart(source::start)()
+    }
+    override suspend fun close() {
+        interceptor.interceptClose(source::close)()
+    }
+
+    override suspend fun sendJsonRpcRequest(request: JsonRpcRequest): JsonRpcSuccessResponse {
+        return interceptor.interceptSendJsonRpcRequest(source::sendJsonRpcRequest)(request)
+    }
+
+    override suspend fun sendJsonRpcNotification(notification: JsonRpcNotification) {
+        interceptor.interceptSendJsonRpcNotification(source::sendJsonRpcNotification)(notification)
+    }
+
+    override val jsonRpcServer = interceptor.interceptRpcServer(source.jsonRpcServer)
+    override val jsonRpcClient = interceptor.interceptRpcClient(source.jsonRpcClient)
 }
 
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
