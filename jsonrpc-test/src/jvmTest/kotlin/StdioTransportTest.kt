@@ -50,6 +50,7 @@ class StdioTransportTest {
 
         // Create a stdio transport
         val transport = StdioTransport()
+        transport.start()
 
         // Read from the transport's receive flow
         val receivedData = transport.receiveFlow.first()
@@ -70,6 +71,7 @@ class StdioTransportTest {
 
         // Create a stdio transport
         val transport = StdioTransport()
+        transport.start()
 
         // Send data through the transport
         val testOutput = "Test output data"
@@ -94,6 +96,7 @@ class StdioTransportTest {
 
         // Create a stdio transport
         val transport = StdioTransport()
+        transport.start()
 
         // Read multiple lines from the transport's receive flow
         val receivedLines = transport.receiveFlow.take(3).map {
