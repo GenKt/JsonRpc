@@ -4,6 +4,7 @@ import io.genkt.jsonrpc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -24,6 +25,7 @@ public interface JsonRpcClient : AutoCloseable {
     public suspend fun start()
     public suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse
     public suspend fun send(notification: JsonRpcNotification)
+    public suspend fun <T, R> onCall(call: Call<T, R>): R
 }
 
 public suspend fun JsonRpcClient.sendRequest(

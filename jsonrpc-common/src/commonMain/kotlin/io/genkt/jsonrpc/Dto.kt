@@ -40,20 +40,22 @@ public value class JsonRpcClientMessageBatch(
     public val messages: List<JsonRpcClientSingleMessage>,
 ) : JsonRpcClientMessage
 
+public sealed interface JsonRpcClientCall<R>
+
 @Serializable
 public data class JsonRpcRequest(
     public val id: RequestId,
     public override val method: String,
     public override val params: JsonElement? = null,
     public override val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcClientSingleMessage
+) : JsonRpcClientSingleMessage, JsonRpcClientCall<JsonRpcSuccessResponse>
 
 @Serializable
 public data class JsonRpcNotification(
     public override val method: String,
     public override val params: JsonElement? = null,
     public override val jsonrpc: String = JsonRpc.VERSION,
-) : JsonRpcClientSingleMessage
+) : JsonRpcClientSingleMessage, JsonRpcClientCall<Unit>
 
 @Serializable
 public data class JsonRpcSuccessResponse(
