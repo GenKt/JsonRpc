@@ -5,6 +5,7 @@ import io.genkt.mcp.common.McpMethods
 import io.genkt.mcp.common.dto.*
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
+import kotlinx.serialization.json.JsonObject
 
 public interface McpClient {
     public val info: McpInit.ClientInfo
@@ -106,7 +107,7 @@ public interface McpClient {
                     paramSerializer = McpResource.ListRequest.serializer(),
                     resultDeserializer = McpResource.ListResponse.serializer()
                 )
-            public val getResource: PreparedRequest<McpResource.ReadRequest, McpResource.ReadResponse> =
+            public val readResource: PreparedRequest<McpResource.ReadRequest, McpResource.ReadResponse> =
                 PreparedRequest(
                     method = McpMethods.Resources.Read,
                     paramSerializer = McpResource.ReadRequest.serializer(),
@@ -130,6 +131,11 @@ public interface McpClient {
                     paramSerializer = McpCompletion.Request.serializer(),
                     resultDeserializer = McpCompletion.Response.serializer()
                 )
+            public val setLogLevel: PreparedNotification<McpLogging.SetLevelRequest> =
+                PreparedNotification(
+                    method = McpMethods.Logging.SetLevel,
+                    paramSerializer = McpLogging.SetLevelRequest.serializer(),
+                )
         }
     }
 }
@@ -137,3 +143,58 @@ public interface McpClient {
 public suspend fun <T, R> McpClient.call(callBuilder: McpClient.Call.Intrinsics.() -> McpClient.Call<T, R>): R {
     return call(McpClient.Call.Intrinsics.callBuilder())
 }
+
+public suspend fun McpClient.listPrompt(cursor: String? = null) =
+    call {
+        listPrompt(McpPrompt.ListRequest(cursor))
+    }
+
+public suspend fun McpClient.getPrompt(name: String, arguments: Map<String, String> = emptyMap()) =
+    call {
+        getPrompt(McpPrompt.GetRequest(name, arguments))
+    }
+
+public suspend fun McpClient.listResource(cursor: String? = null) =
+    call {
+        listResource(McpResource.ListRequest(cursor))
+    }
+
+public suspend fun McpClient.readResource(uri: String) =
+    call {
+        readResource(McpResource.ReadRequest(uri))
+    }
+
+public suspend fun McpClient.listTool(cursor: String? = null) =
+    call {
+        listTool(McpTool.ListRequest(cursor))
+    }
+
+public suspend fun McpClient.callTool(name: String, arguments: JsonObject) =
+    call {
+        callTool(McpTool.CallRequest(name, arguments))
+    }
+
+public suspend fun McpClient.getPromptCompletion(name: String, argName: String = "", argValue: String = "") =
+    call {
+        getCompletion(
+            McpCompletion.Request(
+                McpCompletion.Reference.Prompt(name),
+                McpCompletion.Argument(argName, argValue)
+            )
+        )
+    }
+
+public suspend fun McpClient.getResourceCompletion(uri: String, argName: String = "", argValue: String = "") =
+    call {
+        getCompletion(
+            McpCompletion.Request(
+                McpCompletion.Reference.Resource(uri),
+                McpCompletion.Argument(argName, argValue)
+            )
+        )
+    }
+
+public suspend fun McpClient.setLogLevel(level: McpLogging.Level) =
+    call {
+        setLogLevel(McpLogging.SetLevelRequest(level))
+    }
