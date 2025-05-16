@@ -41,13 +41,22 @@ internal class JsonRpcClientImpl(
     }
 
     override suspend fun start() {
+        transport.start()
         listeningJob.start()
     }
 
-    override suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse {
+    @Suppress("unchecked_cast")
+    override suspend fun <R> execute(call: JsonRpcClientCall<R>): R {
         if (!listeningJob.isActive && !listeningJob.isCompleted) {
             start()
         }
+        return when (call) {
+            is JsonRpcRequest -> sendRequest(call) as R
+            is JsonRpcNotification -> sendNotification(call) as R
+        }
+    }
+
+    private suspend fun sendRequest(request: JsonRpcRequest): JsonRpcSuccessResponse {
         return suspendCancellableCoroutine { completion ->
             coroutineScope.launch {
                 requestMapMutex.withLock { requestMap[request.id] = completion }
@@ -56,10 +65,7 @@ internal class JsonRpcClientImpl(
         }
     }
 
-    override suspend fun send(notification: JsonRpcNotification) {
-        if (!listeningJob.isActive && !listeningJob.isCompleted) {
-            start()
-        }
+    private suspend fun sendNotification(notification: JsonRpcNotification) {
         transport.sendChannel.sendOrThrow(notification)
     }
 
@@ -81,19 +87,16 @@ internal class InterceptedJsonRpcClient(
     override val transport: JsonRpcClientTransport by delegate::transport
     override val coroutineScope: CoroutineScope by delegate::coroutineScope
     override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit by delegate::errorHandler
-    private val interceptedSendRequest = interceptor.interceptRequest(delegate::send)
-    private val interceptedSendNotification = interceptor.interceptNotification(delegate::send)
+    private val interceptedExecute = interceptor.interceptCall { delegate.execute(it) }
 
     override suspend fun start() {
+        transport.start()
         delegate.start()
     }
 
-    override suspend fun send(request: JsonRpcRequest): JsonRpcSuccessResponse {
-        return interceptedSendRequest(request)
-    }
-
-    override suspend fun send(notification: JsonRpcNotification) {
-        interceptedSendNotification(notification)
+    @Suppress("unchecked_cast")
+    override suspend fun <R> execute(call: JsonRpcClientCall<R>): R {
+        return interceptedExecute(call) as R
     }
 
     override fun close() {

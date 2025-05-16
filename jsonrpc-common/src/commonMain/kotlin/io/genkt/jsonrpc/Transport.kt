@@ -19,7 +19,7 @@ public interface Transport<in Input, out Output> : AutoCloseable {
     public val sendChannel: SendChannel<SendAction<Input>>
     public val receiveFlow: Flow<Result<Output>>
     public val coroutineScope: CoroutineScope
-    public suspend fun start()
+    public fun start()
 
     public companion object {
         public val Disabled: Transport<Any?, Nothing> = object : Transport<Any?, Nothing> {
@@ -29,7 +29,7 @@ public interface Transport<in Input, out Output> : AutoCloseable {
                 get() = throw UnsupportedOperationException("Disabled transport")
             override val coroutineScope: CoroutineScope
                 get() = throw UnsupportedOperationException("Disabled transport")
-            override suspend fun start() = Unit
+            override fun start() = Unit
 
             override fun close() {
                 throw UnsupportedOperationException("Disabled transport")
@@ -101,7 +101,7 @@ public fun <Input, Output> Transport(
     receiveFlow: Flow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
-    onStart: suspend () -> Unit = {},
+    onStart: () -> Unit = {},
 ): Transport<Input, Output> =
     TransportImpl(
         sendChannel = sendChannel,
@@ -116,7 +116,7 @@ public fun <Input, Output> SharedTransport(
     receiveFlow: SharedFlow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
-    onStart: suspend () -> Unit = {},
+    onStart: () -> Unit = {},
 ): SharedTransport<Input, Output> =
     SharedTransportImpl(
         sendChannel = sendChannel,

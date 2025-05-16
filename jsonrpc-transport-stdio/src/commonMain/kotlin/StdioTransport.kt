@@ -27,7 +27,7 @@ public fun CoroutineScope.StdioTransport(): StringTransport {
             }
         }
     }
-    val onStart: suspend () -> Unit = suspend {
+    val onStart: () -> Unit = {
         inputJob.start()
         outputJob.start()
     }

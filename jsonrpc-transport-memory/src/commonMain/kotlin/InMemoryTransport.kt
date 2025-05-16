@@ -39,7 +39,7 @@ public fun <T> CoroutineScope.InMemoryTransport(
             sendAction.completeCatchingSuspend { channelOut1.send(Result.success(it)) }
         }
     }
-    val onStart: suspend () -> Unit = suspend {
+    val onStart: () -> Unit = {
         listenJob1.start()
         listenJob2.start()
     }

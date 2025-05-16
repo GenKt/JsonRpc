@@ -28,6 +28,7 @@ internal class JsonRpcServerImpl(
     }
 
     override fun start() {
+        transport.start()
         receiveJob.start()
     }
 
