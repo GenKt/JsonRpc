@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -40,7 +41,6 @@ internal class McpClientImpl(
                         McpRoot.ListResponse.serializer(),
                         onRoot()
                     )
-
                     McpMethods.Sampling.CreateMessage ->
                         JsonRpc.json.encodeToJsonElement(
                             McpSampling.Response.serializer(), onSampling(
@@ -50,7 +50,8 @@ internal class McpClientImpl(
                                 )
                             )
                         )
-
+                    McpMethods.Ping ->
+                        buildJsonObject {}
                     else -> error("Unknown method: ${request.method}")
                 }
             }
