@@ -4,6 +4,7 @@ import io.genkt.jsonrpc.SendAction
 import io.genkt.jsonrpc.Transport
 import io.genkt.jsonrpc.completeCatchingSuspend
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -28,26 +29,32 @@ public fun <T> CoroutineScope.InMemoryTransport(
         channelOut2.close()
     }
 
-    launch {
+    val listenJob1 = launch(start = CoroutineStart.LAZY) {
         channelIn1.consumeAsFlow().collect { sendAction ->
             sendAction.completeCatchingSuspend { channelOut2.send(Result.success(it)) }
         }
     }
-    launch {
+    val listenJob2 = launch(start = CoroutineStart.LAZY) {
         channelIn2.consumeAsFlow().collect { sendAction ->
             sendAction.completeCatchingSuspend { channelOut1.send(Result.success(it)) }
         }
+    }
+    val onStart: suspend () -> Unit = suspend {
+        listenJob1.start()
+        listenJob2.start()
     }
 
     return Transport(
         channelIn1,
         channelOut1.consumeAsFlow(),
         coroutineScope,
-        onClose
+        onClose,
+        onStart,
     ) to Transport(
         channelIn2,
         channelOut2.consumeAsFlow(),
         coroutineScope,
-        onClose
+        onClose,
+        onStart
     )
 }

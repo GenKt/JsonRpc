@@ -11,8 +11,10 @@ internal data class TransportImpl<in Input, out Output>(
     override val receiveFlow: Flow<Result<Output>>,
     override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
+    private val onStart: suspend () -> Unit = {},
 ) : Transport<Input, Output> {
     override fun close() = onClose()
+    override suspend fun start() = onStart()
 }
 
 internal data class SharedTransportImpl<in Input, out Output>(
@@ -20,8 +22,10 @@ internal data class SharedTransportImpl<in Input, out Output>(
     override val receiveFlow: SharedFlow<Result<Output>>,
     override val coroutineScope: CoroutineScope,
     private val onClose: () -> Unit = {},
+    private val onStart: suspend () -> Unit = {},
 ) : SharedTransport<Input, Output> {
     override fun close() = onClose()
+    override suspend fun start() = onStart()
 }
 
 @Suppress("UNCHECKED_CAST")

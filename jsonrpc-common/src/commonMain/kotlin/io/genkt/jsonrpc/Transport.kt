@@ -19,6 +19,7 @@ public interface Transport<in Input, out Output> : AutoCloseable {
     public val sendChannel: SendChannel<SendAction<Input>>
     public val receiveFlow: Flow<Result<Output>>
     public val coroutineScope: CoroutineScope
+    public suspend fun start()
 
     public companion object {
         public val Disabled: Transport<Any?, Nothing> = object : Transport<Any?, Nothing> {
@@ -28,6 +29,7 @@ public interface Transport<in Input, out Output> : AutoCloseable {
                 get() = throw UnsupportedOperationException("Disabled transport")
             override val coroutineScope: CoroutineScope
                 get() = throw UnsupportedOperationException("Disabled transport")
+            override suspend fun start() = Unit
 
             override fun close() {
                 throw UnsupportedOperationException("Disabled transport")
@@ -99,12 +101,14 @@ public fun <Input, Output> Transport(
     receiveFlow: Flow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
+    onStart: suspend () -> Unit = {},
 ): Transport<Input, Output> =
     TransportImpl(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow,
         coroutineScope = coroutineScope,
-        onClose = onClose
+        onClose = onClose,
+        onStart = onStart,
     )
 
 public fun <Input, Output> SharedTransport(
@@ -112,12 +116,14 @@ public fun <Input, Output> SharedTransport(
     receiveFlow: SharedFlow<Result<Output>>,
     coroutineScope: CoroutineScope,
     onClose: () -> Unit = {},
+    onStart: suspend () -> Unit = {},
 ): SharedTransport<Input, Output> =
     SharedTransportImpl(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow,
         coroutineScope = coroutineScope,
-        onClose = onClose
+        onClose = onClose,
+        onStart = onStart,
     )
 
 public fun <Input, Output> Transport<Input, Output>.sharedIn(
@@ -129,7 +135,8 @@ public fun <Input, Output> Transport<Input, Output>.sharedIn(
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.shareIn(coroutineScope.newChild(coroutineContext), started, replay),
         coroutineScope = coroutineScope,
-        onClose = this::close
+        onClose = this::close,
+        onStart = this::start,
     )
 
 public fun <T, R> SendChannel<R>.delegateInput(transform: (T) -> R): SendChannel<T> =
@@ -204,7 +211,8 @@ public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
             JsonRpc.json.decodeFromJsonElement(JsonRpcServerMessageSerializer, it)
         },
         coroutineScope = this.coroutineScope,
-        onClose = this::close
+        onClose = this::close,
+        onStart = this::start
     )
 
 public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
@@ -219,7 +227,8 @@ public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
             JsonRpc.json.decodeFromJsonElement(JsonRpcClientMessageSerializer, it)
         },
         coroutineScope = this.coroutineScope,
-        onClose = this::close
+        onClose = this::close,
+        onStart = this::start,
     )
 
 public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
@@ -231,7 +240,8 @@ public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
             JsonRpc.json.decodeFromJsonElement(JsonRpcMessageSerializer, it)
         },
         coroutineScope = this.coroutineScope,
-        onClose = this::close
+        onClose = this::close,
+        onStart = this::start,
     )
 
 public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport =
@@ -239,7 +249,8 @@ public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport =
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.filterIsInstance(),
         coroutineScope = this.coroutineScope,
-        this::close
+        this::close,
+        onStart = this::start,
     )
 
 public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
@@ -247,7 +258,8 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
         sendChannel = sendChannel,
         receiveFlow = receiveFlow.filterIsInstance(),
         coroutineScope = this.coroutineScope,
-        this::close
+        this::close,
+        onStart = this::start,
     )
 
 public fun StringTransport.asJsonTransport(
@@ -261,7 +273,8 @@ public fun StringTransport.asJsonTransport(
         },
         receiveFlow = parse(receiveFlow).mapCatching { JsonRpc.json.parseToJsonElement(it) },
         coroutineScope = this.coroutineScope,
-        onClose = this::close
+        onClose = this::close,
+        onStart = this::start,
     )
 
 public fun JsonRpcTransport.shareAsClientAndServerIn(

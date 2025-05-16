@@ -13,19 +13,23 @@ import kotlinx.coroutines.flow.consumeAsFlow
 @OptIn(DelicateCoroutinesApi::class)
 public fun CoroutineScope.StdioTransport(): StringTransport {
     val input = Channel<Result<String>>()
-    val inputJob = launch {
+    val inputJob = launch(start = CoroutineStart.LAZY) {
         while (currentCoroutineContext().isActive) {
             val line = readlnOrNull() ?: break
             input.send(Result.success(line))
         }
     }
     val output = Channel<SendAction<String>>()
-    val outputJob = launch {
+    val outputJob = launch(start = CoroutineStart.LAZY) {
         while (currentCoroutineContext().isActive) {
             output.consumeEach { sendAction ->
                 sendAction.completeCatchingSuspend { print(it) }
             }
         }
+    }
+    val onStart: suspend () -> Unit = suspend {
+        inputJob.start()
+        outputJob.start()
     }
     return Transport(
         sendChannel = output,
@@ -37,5 +41,6 @@ public fun CoroutineScope.StdioTransport(): StringTransport {
             output.cancel()
             outputJob.cancel()
         },
+        onStart = onStart
     )
 }
