@@ -62,5 +62,5 @@ public sealed interface McpLogging {
         public val level: Level,
         public val logger: String,
         public val data: JsonElement,
-    )
+    ): McpNotification
 }

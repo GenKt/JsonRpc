@@ -6,7 +6,9 @@ import io.genkt.jsonprc.client.JsonRpcClient
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethods
+import io.genkt.mcp.common.dto.ListChangeResource
 import io.genkt.mcp.common.dto.McpInit
+import io.genkt.mcp.common.dto.McpLogging
 import io.genkt.mcp.common.dto.McpNotification
 import io.genkt.mcp.common.dto.McpRoot
 import io.genkt.mcp.common.dto.McpSampling
@@ -70,7 +72,57 @@ internal class McpClientImpl(
                 result = deferred.await()
             )
         },
-        {}
+        { notification ->
+            when(notification.method) {
+                McpMethods.Notifications.Message ->
+                    onNotification(
+                        JsonRpc.json.decodeFromJsonElement(
+                            McpLogging.LogMessage.serializer(),
+                            notification.params!!
+                        )
+                    )
+                McpMethods.Notifications.Progress ->
+                    onNotification(
+                        JsonRpc.json.decodeFromJsonElement(
+                            McpNotification.Progress.serializer(),
+                            notification.params!!
+                        )
+                    )
+                McpMethods.Notifications.Cancelled -> {
+                    val cancellation = JsonRpc.json.decodeFromJsonElement(
+                        McpNotification.Cancellation.serializer(),
+                        notification.params!!
+                    )
+                    val deferred = requestMap[cancellation.requestId]
+                    deferred?.cancel()
+                }
+                McpMethods.Notifications.Prompts.ListChanged ->
+                    onNotification(
+                        McpNotification.ListChange(
+                            ListChangeResource.PROMPTS
+                        )
+                    )
+                McpMethods.Notifications.Resources.ListChanged ->
+                    onNotification(
+                        McpNotification.ListChange(
+                            ListChangeResource.RESOURCES
+                        )
+                    )
+                McpMethods.Notifications.Tools.ListChanged ->
+                    onNotification(
+                        McpNotification.ListChange(
+                            ListChangeResource.TOOLS
+                        )
+                    )
+                McpMethods.Notifications.Resources.Updated ->
+                    onNotification(
+                        JsonRpc.json.decodeFromJsonElement(
+                            McpNotification.SubscribeResource.serializer(),
+                            notification.params!!
+                        )
+                    )
+            }
+        }
     )
     override val jsonRpcClient = JsonRpcClient(transportPair.first)
 

@@ -1,5 +1,6 @@
 package io.genkt.mcp.common.dto
 
+import io.genkt.jsonrpc.RequestId
 import kotlinx.serialization.Serializable
 
 public enum class ListChangeResource {
@@ -20,9 +21,16 @@ public sealed interface McpNotification {
     ): McpNotification
 
     @Serializable
-    public data class LogMessage(
-        public val message: McpLogging.LogMessage,
+    public data class Progress(
+        public val progressToken: String,
+        public val progress: Int,
+        public val total: Int,
+        public val message: String,
     ): McpNotification
 
-    // TODO: Other Notification data classes
+    @Serializable
+    public data class Cancellation(
+        public val requestId: RequestId,
+        public val reason: String,
+    ): McpNotification
 }
