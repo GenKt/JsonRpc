@@ -7,7 +7,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":genkt-jsonrpc-core"))
+                api(project(":genkt-jsonrpc-common"))
                 api(project(":genkt-serialization-json"))
                 implementation(libs.streamlin)
                 api(libs.kotlinx.coroutine.core)

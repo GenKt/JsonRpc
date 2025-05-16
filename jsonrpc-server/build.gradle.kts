@@ -7,7 +7,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":genkt-jsonrpc-core"))
+                api(project(":genkt-jsonrpc-common"))
             }
         }
     }
