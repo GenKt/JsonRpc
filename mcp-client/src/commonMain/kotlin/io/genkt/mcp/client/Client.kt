@@ -6,6 +6,29 @@ import io.genkt.mcp.common.dto.*
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.JsonObject
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+
+public fun McpClient(
+    info: McpInit.ClientInfo,
+    capabilities: McpInit.ClientCapabilities,
+    onRoot: suspend () -> McpRoot.ListResponse,
+    onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
+    onNotification: suspend (McpNotification) -> Unit,
+    transport: JsonRpcTransport,
+    requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    additionalContext: CoroutineContext = EmptyCoroutineContext,
+): McpClient =
+    McpClientImpl(
+        info,
+        capabilities,
+        onRoot,
+        onSampling,
+        onNotification,
+        transport,
+        requestIdGenerator,
+        additionalContext,
+    )
 
 public interface McpClient {
     public val info: McpInit.ClientInfo
