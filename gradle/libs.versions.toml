@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.1.10"
+kotlin = "2.1.21"
 kotlin-coroutines = "1.10.2"
 ksp = "2.1.10-2.0.1"
 atomicfu = "0.26.1"
