@@ -13,7 +13,6 @@ import kotlinx.serialization.json.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertIs
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 suspend fun testJsonTransport(
@@ -47,7 +46,7 @@ suspend fun testJsonTransport(
     val client = JsonRpcClient(
         transport = clientTransport,
     ).intercept {
-        requestInterceptor = TimeOut(1.seconds)
+        callInterceptor = TimeOut(1.seconds)
     }
     client.start()
     println("Client and Server started")

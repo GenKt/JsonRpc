@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -63,12 +64,16 @@ class InterceptionTest {
             {},
             CoroutineName("Client")
         ).intercept {
-            requestInterceptor += { oldHandler ->
+            callInterceptor += { oldHandler ->
                 { request ->
-                    JsonRpcSuccessResponse(
-                        id = request.id,
-                        result = JsonRpc.json.encodeToJsonElement(String.serializer(), "World"),
-                    )
+                    when(request) {
+                        is JsonRpcRequest ->
+                            JsonRpcSuccessResponse(
+                                id = request.id,
+                                result = JsonPrimitive("World"),
+                            )
+                        is JsonRpcNotification -> Unit
+                    }
                 }
             }
         }

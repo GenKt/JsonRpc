@@ -6,20 +6,19 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 public class JsonRpcClientInterceptor(
-    public val interceptTransport: Interceptor<JsonRpcClientTransport> = { it },
-    public val interceptRequest: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it },
-    public val interceptNotification: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it },
-    public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it },
-    public val additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
+    public val interceptTransport: Interceptor<JsonRpcClientTransport>,
+    public val interceptCall: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?>,
+    public val interceptErrorHandler: Interceptor<suspend CoroutineScope.(Throwable) -> Unit>,
+    public val additionalCoroutineContext: CoroutineContext,
 ) : Interceptor<JsonRpcClient> {
     override fun invoke(client: JsonRpcClient): JsonRpcClient = InterceptedJsonRpcClient(client, this)
-    public class Builder: GenericInterceptorScope {
+    public class Builder : GenericInterceptorScope {
         public var transportInterceptor: Interceptor<JsonRpcClientTransport> = { it }
-        public var requestInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = { it }
-        public var notificationInterceptor: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it }
+        public var callInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = { it }
         public var errorHandlerInterceptor: Interceptor<suspend CoroutineScope.(Throwable) -> Unit> = { it }
         public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
     }
+
     public companion object {
         public operator fun invoke(buildAction: Builder.() -> Unit): JsonRpcClientInterceptor =
             Builder().apply(buildAction).build()
@@ -29,9 +28,9 @@ public class JsonRpcClientInterceptor(
 public fun JsonRpcClientInterceptor.Builder.build(): JsonRpcClientInterceptor =
     JsonRpcClientInterceptor(
         interceptTransport = transportInterceptor,
-        interceptRequest = requestInterceptor,
-        interceptNotification = notificationInterceptor,
+        interceptCall = callInterceptor,
         interceptErrorHandler = errorHandlerInterceptor,
+        additionalCoroutineContext = additionalCoroutineContext,
     )
 
 public fun JsonRpcClient.interceptWith(
