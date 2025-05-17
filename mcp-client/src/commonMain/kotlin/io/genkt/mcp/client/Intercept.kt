@@ -3,9 +3,7 @@ package io.genkt.mcp.client
 import io.genkt.jsonprc.client.JsonRpcClient
 import io.genkt.jsonrpc.GenericInterceptorScope
 import io.genkt.jsonrpc.Interceptor
-import io.genkt.jsonrpc.JsonRpcNotification
-import io.genkt.jsonrpc.JsonRpcRequest
-import io.genkt.jsonrpc.JsonRpcSuccessResponse
+import io.genkt.jsonrpc.JsonRpcClientCall
 import io.genkt.jsonrpc.JsonRpcTransport
 import io.genkt.jsonrpc.RequestId
 import io.genkt.jsonrpc.server.JsonRpcServer
@@ -22,8 +20,7 @@ public class McpClientInterceptor(
     public val interceptNotificationHandler: Interceptor<suspend (McpNotification) -> Unit> = {it},
     public val interceptTransport: Interceptor<JsonRpcTransport> = {it},
     public val interceptRequestIdGenerator: Interceptor<() -> RequestId> = {it},
-    public val interceptSendJsonRpcRequest: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = {it},
-    public val interceptSendJsonRpcNotification: Interceptor<suspend (JsonRpcNotification) -> Unit> = {it},
+    public val interceptSendJsonRpcCall: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = {it},
     public val interceptCall: Interceptor<suspend (McpClient.Call<*, *>) -> Any?> = {it},
     public val interceptStart: Interceptor<suspend () -> Unit> = {it},
     public val interceptClose: Interceptor<suspend () -> Unit> = {it},
@@ -39,8 +36,7 @@ public class McpClientInterceptor(
         public var notificationHandlerInterceptor: Interceptor<suspend (McpNotification) -> Unit> = {it}
         public var transportInterceptor: Interceptor<JsonRpcTransport> = {it}
         public var requestIdGeneratorInterceptor: Interceptor<() -> RequestId> = {it}
-        public var sendJsonRpcRequestInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcSuccessResponse> = {it}
-        public var sendJsonRpcNotificationInterceptor: Interceptor<suspend (JsonRpcNotification) -> Unit> = {it}
+        public var sendJsonRpcCallInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = {it}
         public var callInterceptor: Interceptor<suspend (McpClient.Call<*, *>) -> Any?> = {it}
         public var startInterceptor: Interceptor<suspend () -> Unit> = {it}
         public var closeInterceptor: Interceptor<suspend () -> Unit> = {it}
@@ -62,8 +58,7 @@ public fun McpClientInterceptor.Builder.build(): McpClientInterceptor =
         interceptNotificationHandler = notificationHandlerInterceptor,
         interceptTransport = transportInterceptor,
         interceptRequestIdGenerator = requestIdGeneratorInterceptor,
-        interceptSendJsonRpcRequest = sendJsonRpcRequestInterceptor,
-        interceptSendJsonRpcNotification = sendJsonRpcNotificationInterceptor,
+        interceptSendJsonRpcCall = sendJsonRpcCallInterceptor,
         interceptCall = callInterceptor,
         interceptStart = startInterceptor,
         interceptClose = closeInterceptor,

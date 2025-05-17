@@ -48,10 +48,8 @@ public interface McpClient {
     public fun nextRequestId(): RequestId
 
     @McpClientInterceptionApi
-    public suspend fun sendJsonRpcRequest(request: JsonRpcRequest): JsonRpcSuccessResponse
+    public suspend fun <R> sendJsonRpcCall(call: JsonRpcClientCall<R>): R
 
-    @McpClientInterceptionApi
-    public suspend fun sendJsonRpcNotification(notification: JsonRpcNotification)
     public suspend fun <T, R> call(mcpCall: Call<T, R>): R
     public suspend fun start()
     public suspend fun close()
@@ -65,7 +63,7 @@ public interface McpClient {
         ) : Call<T, R> {
             @OptIn(McpClientInterceptionApi::class)
             public override suspend fun execute(mcpClient: McpClient): R {
-                val response = mcpClient.sendJsonRpcRequest(
+                val response = mcpClient.sendJsonRpcCall(
                     JsonRpcRequest(
                         id = mcpClient.nextRequestId(),
                         method = method,
@@ -83,7 +81,7 @@ public interface McpClient {
         ) : Call<T, Unit> {
             @OptIn(McpClientInterceptionApi::class)
             public override suspend fun execute(mcpClient: McpClient) {
-                mcpClient.sendJsonRpcNotification(
+                mcpClient.sendJsonRpcCall(
                     JsonRpcNotification(
                         method = method,
                         params = JsonRpc.json.encodeToJsonElement(paramSerializer, param),

@@ -130,14 +130,8 @@ internal class McpClientImpl(
     override fun nextRequestId(): RequestId = requestIdGenerator()
 
     @McpClientInterceptionApi
-    override suspend fun sendJsonRpcRequest(request: JsonRpcRequest): JsonRpcSuccessResponse {
-        return jsonRpcClient.send(request)
-    }
-
-    @McpClientInterceptionApi
-    override suspend fun sendJsonRpcNotification(notification: JsonRpcNotification) {
-        return jsonRpcClient.send(notification)
-    }
+    override suspend fun <R> sendJsonRpcCall(call: JsonRpcClientCall<R>): R =
+        jsonRpcClient.execute(call)
 
     override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): R {
         return mcpCall.execute(this)
@@ -165,8 +159,11 @@ internal class InterceptedMcpClient(
     transport = interceptor.interceptTransport(source.transport),
     requestIdGenerator = interceptor.interceptRequestIdGenerator(source.requestIdGenerator)
 ) {
+    @Suppress("unchecked_cast")
     override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): R {
-        return interceptor.interceptCall(source::call)(mcpCall) as R
+        return interceptor.interceptCall {
+            source.call(mcpCall)
+        }(mcpCall) as R
     }
     override suspend fun start() {
         interceptor.interceptStart(source::start)()
@@ -175,12 +172,11 @@ internal class InterceptedMcpClient(
         interceptor.interceptClose(source::close)()
     }
 
-    override suspend fun sendJsonRpcRequest(request: JsonRpcRequest): JsonRpcSuccessResponse {
-        return interceptor.interceptSendJsonRpcRequest(source::sendJsonRpcRequest)(request)
-    }
-
-    override suspend fun sendJsonRpcNotification(notification: JsonRpcNotification) {
-        interceptor.interceptSendJsonRpcNotification(source::sendJsonRpcNotification)(notification)
+    @Suppress("unchecked_cast")
+    override suspend fun <R> sendJsonRpcCall(call: JsonRpcClientCall<R>): R {
+        return interceptor.interceptSendJsonRpcCall {
+            source.sendJsonRpcCall(call)
+        } (call) as R
     }
 
     override val jsonRpcServer = interceptor.interceptRpcServer(source.jsonRpcServer)
