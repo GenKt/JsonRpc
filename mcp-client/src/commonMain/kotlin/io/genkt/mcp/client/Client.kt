@@ -4,7 +4,14 @@ import io.genkt.jsonprc.client.JsonRpcClient
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethods
+import io.genkt.mcp.common.ProgressResult
+import io.genkt.mcp.common.ProgressingResult
+import io.genkt.mcp.common.defaultProgressTokenGenerator
 import io.genkt.mcp.common.dto.*
+import io.genkt.mcp.common.withProgressToken
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.JsonObject
@@ -19,6 +26,7 @@ public fun McpClient(
     onNotification: suspend (McpNotification) -> Unit,
     transport: JsonRpcTransport,
     requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    progressTokenGenerator: () -> String = defaultProgressTokenGenerator,
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ): McpClient =
     McpClientImpl(
@@ -29,6 +37,7 @@ public fun McpClient(
         onNotification,
         transport,
         requestIdGenerator,
+        progressTokenGenerator,
         additionalContext,
     )
 
@@ -40,37 +49,59 @@ public interface McpClient {
     public val onNotification: suspend (McpNotification) -> Unit
     public val transport: JsonRpcTransport
     public val requestIdGenerator: () -> RequestId
+    public val progressTokenGenerator: () -> String
 
     public val jsonRpcServer: JsonRpcServer
     public val jsonRpcClient: JsonRpcClient
 
+    public val coroutineScope: CoroutineScope
+
+    public val progressMap: MutableMap<String, ProgressingResult<*>>
+
     @McpClientInterceptionApi
     public fun nextRequestId(): RequestId
+    @McpClientInterceptionApi
+    public fun nextProgressToken(): String
 
     @McpClientInterceptionApi
     public suspend fun <R> sendJsonRpcCall(call: JsonRpcClientCall<R>): R
 
-    public suspend fun <T, R> call(mcpCall: Call<T, R>): R
+    public suspend fun <T, R> call(mcpCall: Call<T, R>): ProgressingResult<R>
     public suspend fun start()
     public suspend fun close()
     public sealed interface Call<T, R> {
-        public suspend fun execute(mcpClient: McpClient): R
+        public suspend fun execute(mcpClient: McpClient): ProgressingResult<R>
         public data class Request<T, R>(
             public val method: String,
             public val param: T,
             public val paramSerializer: SerializationStrategy<T>,
             public val resultDeserializer: DeserializationStrategy<R>,
+            public val progress: Boolean = false,
         ) : Call<T, R> {
             @OptIn(McpClientInterceptionApi::class)
-            public override suspend fun execute(mcpClient: McpClient): R {
-                val response = mcpClient.sendJsonRpcCall(
-                    JsonRpcRequest(
-                        id = mcpClient.nextRequestId(),
-                        method = method,
-                        params = JsonRpc.json.encodeToJsonElement(paramSerializer, param),
+            public override suspend fun execute(mcpClient: McpClient): ProgressingResult<R> {
+                val token = if (progress) mcpClient.nextProgressToken() else ""
+                val deferred = mcpClient.coroutineScope.async {
+                    val result = mcpClient.sendJsonRpcCall(
+                        JsonRpcRequest(
+                            id = mcpClient.nextRequestId(),
+                            method = method,
+                            params = JsonRpc.json.encodeToJsonElement(paramSerializer, param),
+                        ).run {
+                            if (progress) {
+                                return@run this.withProgressToken(token)
+                            } else {
+                                return@run this
+                            }
+                        }
                     )
-                )
-                return JsonRpc.json.decodeFromJsonElement(resultDeserializer, response.result)
+                    JsonRpc.json.decodeFromJsonElement(resultDeserializer, result.result)
+                }
+                return ProgressResult(
+                    deferred
+                ).apply {
+                    if (progress) mcpClient.progressMap[token] = this
+                }
             }
         }
 
@@ -80,12 +111,17 @@ public interface McpClient {
             public val paramSerializer: SerializationStrategy<T>,
         ) : Call<T, Unit> {
             @OptIn(McpClientInterceptionApi::class)
-            public override suspend fun execute(mcpClient: McpClient) {
+            public override suspend fun execute(mcpClient: McpClient): ProgressingResult<Unit> {
                 mcpClient.sendJsonRpcCall(
                     JsonRpcNotification(
                         method = method,
                         params = JsonRpc.json.encodeToJsonElement(paramSerializer, param),
                     )
+                )
+                return ProgressResult(
+                    CompletableDeferred<Unit>().apply {
+                        complete(Unit)
+                    }
                 )
             }
         }
@@ -94,13 +130,14 @@ public interface McpClient {
             public val method: String,
             public val paramSerializer: SerializationStrategy<T>,
             public val resultDeserializer: DeserializationStrategy<R>,
-        ) : (T) -> Call<T, R> {
-            override fun invoke(param: T): Call<T, R> =
+        ) : (T, Boolean) -> Call<T, R> {
+            override fun invoke(param: T, progress: Boolean): Call<T, R> =
                 Request(
                     method = method,
                     param = param,
                     paramSerializer = paramSerializer,
-                    resultDeserializer = resultDeserializer
+                    resultDeserializer = resultDeserializer,
+                    progress = progress,
                 )
         }
 
@@ -168,57 +205,59 @@ public interface McpClient {
     }
 }
 
-public suspend fun <T, R> McpClient.call(callBuilder: McpClient.Call.Intrinsics.() -> McpClient.Call<T, R>): R {
+public suspend fun <T, R> McpClient.call(callBuilder: McpClient.Call.Intrinsics.() -> McpClient.Call<T, R>): ProgressingResult<R> {
     return call(McpClient.Call.Intrinsics.callBuilder())
 }
 
-public suspend fun McpClient.listPrompt(cursor: String? = null) =
+public suspend fun McpClient.listPrompt(cursor: String? = null, progress: Boolean = false) =
     call {
-        listPrompt(McpPrompt.ListRequest(cursor))
+        listPrompt(McpPrompt.ListRequest(cursor), progress)
     }
 
-public suspend fun McpClient.getPrompt(name: String, arguments: Map<String, String> = emptyMap()) =
+public suspend fun McpClient.getPrompt(name: String, arguments: Map<String, String> = emptyMap(), progress: Boolean = false) =
     call {
-        getPrompt(McpPrompt.GetRequest(name, arguments))
+        getPrompt(McpPrompt.GetRequest(name, arguments), progress)
     }
 
-public suspend fun McpClient.listResource(cursor: String? = null) =
+public suspend fun McpClient.listResource(cursor: String? = null, progress: Boolean = false) =
     call {
-        listResource(McpResource.ListRequest(cursor))
+        listResource(McpResource.ListRequest(cursor), progress)
     }
 
-public suspend fun McpClient.readResource(uri: String) =
+public suspend fun McpClient.readResource(uri: String, progress: Boolean = false) =
     call {
-        readResource(McpResource.ReadRequest(uri))
+        readResource(McpResource.ReadRequest(uri), progress)
     }
 
-public suspend fun McpClient.listTool(cursor: String? = null) =
+public suspend fun McpClient.listTool(cursor: String? = null, progress: Boolean = false) =
     call {
-        listTool(McpTool.ListRequest(cursor))
+        listTool(McpTool.ListRequest(cursor), progress)
     }
 
-public suspend fun McpClient.callTool(name: String, arguments: JsonObject) =
+public suspend fun McpClient.callTool(name: String, arguments: JsonObject, progress: Boolean = false) =
     call {
-        callTool(McpTool.CallRequest(name, arguments))
+        callTool(McpTool.CallRequest(name, arguments), progress)
     }
 
-public suspend fun McpClient.getPromptCompletion(name: String, argName: String = "", argValue: String = "") =
+public suspend fun McpClient.getPromptCompletion(name: String, argName: String = "", argValue: String = "", progress: Boolean = false) =
     call {
         getCompletion(
             McpCompletion.Request(
                 McpCompletion.Reference.Prompt(name),
                 McpCompletion.Argument(argName, argValue)
-            )
+            ),
+            progress
         )
     }
 
-public suspend fun McpClient.getResourceCompletion(uri: String, argName: String = "", argValue: String = "") =
+public suspend fun McpClient.getResourceCompletion(uri: String, argName: String = "", argValue: String = "", progress: Boolean = false) =
     call {
         getCompletion(
             McpCompletion.Request(
                 McpCompletion.Reference.Resource(uri),
                 McpCompletion.Argument(argName, argValue)
-            )
+            ),
+            progress
         )
     }
 

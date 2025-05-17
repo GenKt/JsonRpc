@@ -7,6 +7,7 @@ import io.genkt.jsonrpc.JsonRpcClientCall
 import io.genkt.jsonrpc.JsonRpcTransport
 import io.genkt.jsonrpc.RequestId
 import io.genkt.jsonrpc.server.JsonRpcServer
+import io.genkt.mcp.common.ProgressingResult
 import io.genkt.mcp.common.dto.McpInit
 import io.genkt.mcp.common.dto.McpNotification
 import io.genkt.mcp.common.dto.McpRoot
@@ -21,7 +22,7 @@ public class McpClientInterceptor(
     public val interceptTransport: Interceptor<JsonRpcTransport> = {it},
     public val interceptRequestIdGenerator: Interceptor<() -> RequestId> = {it},
     public val interceptSendJsonRpcCall: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = {it},
-    public val interceptCall: Interceptor<suspend (McpClient.Call<*, *>) -> Any?> = {it},
+    public val interceptCall: Interceptor<suspend (McpClient.Call<*, *>) -> ProgressingResult<*>> = {it},
     public val interceptStart: Interceptor<suspend () -> Unit> = {it},
     public val interceptClose: Interceptor<suspend () -> Unit> = {it},
     public val interceptRpcServer: Interceptor<JsonRpcServer> = {it},
@@ -37,7 +38,7 @@ public class McpClientInterceptor(
         public var transportInterceptor: Interceptor<JsonRpcTransport> = {it}
         public var requestIdGeneratorInterceptor: Interceptor<() -> RequestId> = {it}
         public var sendJsonRpcCallInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = {it}
-        public var callInterceptor: Interceptor<suspend (McpClient.Call<*, *>) -> Any?> = {it}
+        public var callInterceptor: Interceptor<suspend (McpClient.Call<*, *>) -> ProgressingResult<*>> = {it}
         public var startInterceptor: Interceptor<suspend () -> Unit> = {it}
         public var closeInterceptor: Interceptor<suspend () -> Unit> = {it}
         public var rpcServerInterceptor: Interceptor<JsonRpcServer> = {it}

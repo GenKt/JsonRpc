@@ -6,6 +6,9 @@ import io.genkt.jsonprc.client.JsonRpcClient
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethods
+import io.genkt.mcp.common.Progress
+import io.genkt.mcp.common.ProgressingResult
+import io.genkt.mcp.common.defaultProgressTokenGenerator
 import io.genkt.mcp.common.dto.ListChangeResource
 import io.genkt.mcp.common.dto.McpInit
 import io.genkt.mcp.common.dto.McpLogging
@@ -28,11 +31,13 @@ internal class McpClientImpl(
     override val onNotification: suspend (McpNotification) -> Unit,
     override val transport: JsonRpcTransport,
     override val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    override val progressTokenGenerator: () -> String = defaultProgressTokenGenerator,
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
     private val requestMutex = Mutex()
     private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
-    private val coroutineScope = transport.coroutineScope.newChild(additionalContext)
+    override val coroutineScope = transport.coroutineScope.newChild(additionalContext)
+    override val progressMap: MutableMap<String, ProgressingResult<*>> = mutableMapOf()
     private val transportPair = transport.shareAsClientAndServerIn()
     override val jsonRpcServer = JsonRpcServer(
         transportPair.second,
@@ -81,13 +86,18 @@ internal class McpClientImpl(
                             notification.params!!
                         )
                     )
-                McpMethods.Notifications.Progress ->
-                    onNotification(
-                        JsonRpc.json.decodeFromJsonElement(
-                            McpNotification.Progress.serializer(),
-                            notification.params!!
-                        )
+                McpMethods.Notifications.Progress -> {
+                    val params = JsonRpc.json.decodeFromJsonElement(
+                        McpNotification.Progress.serializer(),
+                        notification.params!!
                     )
+                    val progress = Progress(
+                        progress = params.progress,
+                        total = params.total,
+                        message = params.message,
+                    )
+                    progressMap[params.progressToken]?.progressChannel?.send(progress)
+                }
                 McpMethods.Notifications.Cancelled -> {
                     val cancellation = JsonRpc.json.decodeFromJsonElement(
                         McpNotification.Cancellation.serializer(),
@@ -130,10 +140,13 @@ internal class McpClientImpl(
     override fun nextRequestId(): RequestId = requestIdGenerator()
 
     @McpClientInterceptionApi
+    override fun nextProgressToken(): String = progressTokenGenerator()
+
+    @McpClientInterceptionApi
     override suspend fun <R> sendJsonRpcCall(call: JsonRpcClientCall<R>): R =
         jsonRpcClient.execute(call)
 
-    override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): R {
+    override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): ProgressingResult<R> {
         return mcpCall.execute(this)
     }
 
@@ -160,10 +173,10 @@ internal class InterceptedMcpClient(
     requestIdGenerator = interceptor.interceptRequestIdGenerator(source.requestIdGenerator)
 ) {
     @Suppress("unchecked_cast")
-    override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): R {
+    override suspend fun <T, R> call(mcpCall: McpClient.Call<T, R>): ProgressingResult<R> {
         return interceptor.interceptCall {
             source.call(mcpCall)
-        }(mcpCall) as R
+        }(mcpCall) as ProgressingResult<R>
     }
     override suspend fun start() {
         interceptor.interceptStart(source::start)()
