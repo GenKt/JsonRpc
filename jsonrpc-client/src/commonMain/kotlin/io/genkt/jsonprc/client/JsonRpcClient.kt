@@ -11,11 +11,15 @@ public fun JsonRpcClient(
     transport: JsonRpcClientTransport,
     errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
+    buildInterceptor: (JsonRpcClientInterceptor.Builder.() -> Unit)? = null,
 ): JsonRpcClient = JsonRpcClientImpl(
     transport,
     errorHandler,
     coroutineContext
-)
+).let {
+    if (buildInterceptor == null) it
+    else it.intercept(buildInterceptor)
+}
 
 public interface JsonRpcClient : AutoCloseable {
     public val transport: JsonRpcClientTransport

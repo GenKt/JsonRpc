@@ -14,13 +14,17 @@ public fun JsonRpcServer(
     onNotification: suspend (JsonRpcNotification) -> Unit,
     errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
+    buildInterceptor: (JsonRpcServerInterceptor.Builder.() -> Unit)? = null,
 ): JsonRpcServer = JsonRpcServerImpl(
     transport,
     onRequest,
     onNotification,
     errorHandler,
     coroutineContext
-)
+).let {
+    if (buildInterceptor == null) it
+    else it.intercept(buildInterceptor)
+}
 
 public interface JsonRpcServer : AutoCloseable {
     public val transport: JsonRpcServerTransport
