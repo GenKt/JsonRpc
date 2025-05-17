@@ -1,76 +1,60 @@
 package io.genkt.mcp.common.dto
 
+import io.genkt.mcp.common.McpMethods
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
-import kotlin.jvm.JvmInline
 
 @Serializable
 public data class McpPrompt(
     public val name: String,
-    public val description: String,
-    public val arguments: List<Argument>,
+    public val description: String? = null,
+    public val arguments: List<Argument> = emptyList()
 ) {
 
     @Serializable
     public data class ListRequest(
-        public val cursor: String? = null
-    )
+        public override val cursor: McpPaginated.Cursor? = null
+    ): McpClientRequest<ListResult>, McpPaginated.Request {
+        override val method: String get() = McpMethods.Prompts.List
+    }
 
     @Serializable
-    public data class ListResponse(
+    public data class ListResult(
         public val prompts: List<McpPrompt>,
-        public val nextCursor: String? = null,
-    )
+        public override val nextCursor: McpPaginated.Cursor? = null,
+    ): McpPaginated.Result
 
     @Serializable
     public data class GetRequest(
         public val name: String,
         public val arguments: Map<String, String>
+    ): McpClientRequest<GetResult> {
+        override val method: String get() = McpMethods.Prompts.Get
+    }
+
+    @Serializable
+    public data object ListChangedNotification: McpServerNotification {
+        override val method: String get() = McpMethods.Notifications.Prompts.ListChanged
+    }
+
+    @Serializable
+    public data class GetResult(
+        public val description: String? = null,
+        public val messages: List<Message>,
     )
 
     @Serializable
     public data class Argument(
         public val name: String,
-        public val description: String,
-        public val required: Boolean
-    )
-
-    @Serializable
-    public data class GetResponse(
-        public val description: String,
-        public val messages: List<Message>,
+        public val description: String? = null,
+        public val required: Boolean = false
     )
 
     @Serializable
     public data class Message(
         public val role: String,
-        public val content: Content,
+        public val content: McpContent.Prompt,
     )
-
-    @Serializable(with = McpPromptContentSerializer::class)
-    public sealed interface Content {
-        @Serializable(with = McpPromptTextContentSerializer::class)
-        @JvmInline
-        public value class Text(
-            public val text: String,
-        ): Content
-        @Serializable(with = McpPromptImageContentSerializer::class)
-        public data class Image(
-            public val data: String,
-            public val mimeType: String,
-        ): Content
-        @Serializable(with = McpPromptAudioContentSerializer::class)
-        public data class Audio(
-            public val data: String,
-            public val mimeType: String,
-        ): Content
-        @Serializable(with = McpPromptResourceContentSerializer::class)
-        public data class Resource(
-            public val uri: String,
-            public val mimeType: String,
-            public val text: String,
-        ): Content
-    }
 }
 
 @Serializable
@@ -83,126 +67,135 @@ public data class McpResource(
 ) {
     @Serializable
     public data class ListRequest(
-        public val cursor: String? = null
-    )
+        public override val cursor: McpPaginated.Cursor? = null
+    ): McpClientRequest<ListResult>, McpPaginated.Request {
+        override val method: String get() = McpMethods.Resources.List
+    }
 
     @Serializable
-    public data class ListResponse(
+    public data class ListResult(
         public val resources: List<McpResource>,
-        public val nextCursor: String? = null,
+        public override val nextCursor: McpPaginated.Cursor? = null,
+    ): McpPaginated.Result
+
+    @Serializable
+    public data class ListTemplateRequest(
+        public override val cursor: McpPaginated.Cursor? = null
+    ): McpClientRequest<ListTemplateResult>, McpPaginated.Request {
+        override val method: String get() = McpMethods.Resources.Templates.List
+    }
+
+    @Serializable
+    public data class ListTemplateResult(
+        public val resourceTemplates: List<Template>,
     )
 
     @Serializable
     public data class ReadRequest(
         public val uri: String,
+    ): McpClientRequest<ReadResult> {
+        override val method: String get() = McpMethods.Resources.Read
+    }
+
+    @Serializable
+    public data class ReadResult(
+        public val contents: List<McpContent.Resource>,
     )
 
     @Serializable
-    public data class ReadResponse(
-        public val contents: List<Content>,
-    )
-
-    @Serializable(with = McpResourceContentSerializer::class)
-    public sealed interface Content {
-        public val uri: String
-        public val mimeType: String
-
-        @Serializable
-        public data class Text(
-            override val uri: String,
-            override val mimeType: String,
-            val text: String,
-        ): Content
-
-        @Serializable
-        public data class Binary(
-            override val uri: String,
-            override val mimeType: String,
-            val blob: String,
-        ): Content
+    public data object ListChangedNotification: McpServerNotification {
+        override val method: String get() = McpMethods.Notifications.Resources.ListChanged
     }
 
     @Serializable
     public data class Template(
         public val uriTemplate: String,
         public val name: String,
-        public val description: String,
-        public val mimeType: String,
-    )
-
-    @Serializable
-    public data class ListTemplateResponse(
-        public val resourceTemplates: List<Template>,
+        public val description: String? = null,
+        public val mimeType: String? = null,
+        public val annotations: McpContent.Annotations? = null,
     )
 
     @Serializable
     public data class SubscribeRequest(
         public val uri: String,
-    )
+    ): McpClientRequest<SubscribeResult> {
+        override val method: String get() = McpMethods.Resources.Subscribe
+    }
 
     @Serializable
-    public data class SubscribeNotification(
+    public data object SubscribeResult
+
+    @Serializable
+    public data class UnsubscribeRequest(
         public val uri: String,
-    )
+    ): McpClientRequest<UnsubscribeResult> {
+        override val method: String get() = McpMethods.Resources.Unsubscribe
+    }
+
+    @Serializable
+    public data object UnsubscribeResult
+
+    @Serializable
+    public data class UpdatedNotification(
+        public val uri: String,
+    ): McpServerNotification {
+        override val method: String get() = McpMethods.Notifications.Resources.Updated
+    }
 }
 
 @Serializable
 public data class McpTool(
     public val name: String,
     public val description: String,
-    public val inputSchema: Input,
-    public val annotations: JsonObject? = null,
+    public val inputSchema: InputSchema,
+    public val annotations: Annotations? = null,
 ) {
     @Serializable
-    public data class Input(
-        public val properties: JsonObject,
-        public val required: List<String>
+    public data class InputSchema(
+        public val type: String = "object",
+        public val properties: JsonObject? = null,
+        public val required: List<String>? = null
     )
 
     @Serializable
     public data class ListRequest(
-        public val cursor: String? = null
-    )
+        public override val cursor: McpPaginated.Cursor? = null
+    ): McpClientRequest<ListResult>, McpPaginated.Request {
+        override val method: String get() = McpMethods.Tools.List
+    }
 
     @Serializable
-    public data class ListResponse(
+    public data class ListResult(
         public val tools: List<McpTool>,
-        public val nextCursor: String? = null,
-    )
+        public override val nextCursor: McpPaginated.Cursor? = null,
+    ): McpPaginated.Result
 
     @Serializable
     public data class CallRequest(
         public val name: String,
         public val arguments: JsonObject
+    ): McpClientRequest<CallResult> {
+        override val method: String get() = McpMethods.Tools.Call
+    }
+
+    @Serializable
+    public data class CallResult(
+        public val content: List<McpContent.Prompt>,
+        public val isError: Boolean = false,
     )
 
     @Serializable
-    public data class CallResponse(
-        public val content: List<Content>,
-    )
-
-    @Serializable(with = McpToolContentSerializer::class)
-    public sealed interface Content {
-        @Serializable(with = McpToolTextContentSerializer::class)
-        @JvmInline
-        public value class Text(
-            public val text: String,
-        ): Content
-        @Serializable(with = McpToolImageContentSerializer::class)
-        public data class Image(
-            public val data: String,
-            public val mimeType: String,
-        ): Content
-        @Serializable(with = McpToolAudioContentSerializer::class)
-        public data class Audio(
-            public val data: String,
-            public val mimeType: String,
-        ): Content
-        @Serializable(with = McpToolResourceContentSerializer::class)
-        public data class Resource(
-            public val uri: String,
-            public val mimeType: String,
-            public val text: String,
-        ): Content
+    public data object ListChangedNotification: McpServerNotification {
+        override val method: String get() = McpMethods.Notifications.Tools.ListChanged
     }
+
+    @Serializable
+    public data class Annotations(
+        public val title: String? = null,
+        public val readOnlyHint: Boolean? = null,
+        public val destructiveHint: Boolean? = null,
+        public val idempotentHint: Boolean? = null,
+        public val openWorldHint: Boolean? = null,
+    )
 }

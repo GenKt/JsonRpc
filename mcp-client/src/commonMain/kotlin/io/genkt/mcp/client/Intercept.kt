@@ -17,7 +17,7 @@ public class McpClientInterceptor(
     public val interceptInfo: Interceptor<McpInit.ClientInfo> = {it},
     public val interceptCapabilities: Interceptor<McpInit.ClientCapabilities> = {it},
     public val interceptRootHandler: Interceptor<suspend () -> McpRoot.ListResponse> = {it},
-    public val interceptSamplingHandler: Interceptor<suspend (McpSampling.Request) -> McpSampling.Response> = {it},
+    public val interceptSamplingHandler: Interceptor<suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult> = {it},
     public val interceptNotificationHandler: Interceptor<suspend (McpNotification) -> Unit> = {it},
     public val interceptTransport: Interceptor<JsonRpcTransport> = {it},
     public val interceptRequestIdGenerator: Interceptor<() -> RequestId> = {it},
@@ -33,7 +33,7 @@ public class McpClientInterceptor(
         public var infoInterceptor: Interceptor<McpInit.ClientInfo> = {it}
         public var capabilitiesInterceptor: Interceptor<McpInit.ClientCapabilities> = {it}
         public var rootHandlerInterceptor: Interceptor<suspend () -> McpRoot.ListResponse> = {it}
-        public var samplingHandlerInterceptor: Interceptor<suspend (McpSampling.Request) -> McpSampling.Response> = {it}
+        public var samplingHandlerInterceptor: Interceptor<suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult> = {it}
         public var notificationHandlerInterceptor: Interceptor<suspend (McpNotification) -> Unit> = {it}
         public var transportInterceptor: Interceptor<JsonRpcTransport> = {it}
         public var requestIdGeneratorInterceptor: Interceptor<() -> RequestId> = {it}

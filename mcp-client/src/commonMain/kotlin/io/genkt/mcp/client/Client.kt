@@ -25,7 +25,7 @@ public fun McpClient(
     info: McpInit.ClientInfo,
     capabilities: McpInit.ClientCapabilities,
     onRoot: suspend () -> McpRoot.ListResponse,
-    onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
+    onSampling: suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult,
     onNotification: suspend (McpNotification) -> Unit,
     transport: JsonRpcTransport,
     requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
@@ -48,7 +48,7 @@ public interface McpClient {
     public val info: McpInit.ClientInfo
     public val capabilities: McpInit.ClientCapabilities
     public val onRoot: suspend () -> McpRoot.ListResponse
-    public val onSampling: suspend (McpSampling.Request) -> McpSampling.Response
+    public val onSampling: suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult
     public val onNotification: suspend (McpNotification) -> Unit
     public val transport: JsonRpcTransport
     public val requestIdGenerator: () -> RequestId
@@ -170,47 +170,47 @@ public interface McpClient {
         }
 
         public companion object Intrinsics {
-            public val listPrompt: PreparedRequest<McpPrompt.ListRequest, McpPrompt.ListResponse> =
+            public val listPrompt: PreparedRequest<McpPrompt.ListRequest, McpPrompt.ListResult> =
                 PreparedRequest(
                     method = McpMethods.Prompts.List,
                     paramSerializer = McpPrompt.ListRequest.serializer(),
-                    resultDeserializer = McpPrompt.ListResponse.serializer()
+                    resultDeserializer = McpPrompt.ListResult.serializer()
                 )
-            public val getPrompt: PreparedRequest<McpPrompt.GetRequest, McpPrompt.GetResponse> =
+            public val getPrompt: PreparedRequest<McpPrompt.GetRequest, McpPrompt.GetResult> =
                 PreparedRequest(
                     method = McpMethods.Prompts.Get,
                     paramSerializer = McpPrompt.GetRequest.serializer(),
-                    resultDeserializer = McpPrompt.GetResponse.serializer()
+                    resultDeserializer = McpPrompt.GetResult.serializer()
                 )
-            public val listResource: PreparedRequest<McpResource.ListRequest, McpResource.ListResponse> =
+            public val listResource: PreparedRequest<McpResource.ListRequest, McpResource.ListResult> =
                 PreparedRequest(
                     method = McpMethods.Resources.List,
                     paramSerializer = McpResource.ListRequest.serializer(),
-                    resultDeserializer = McpResource.ListResponse.serializer()
+                    resultDeserializer = McpResource.ListResult.serializer()
                 )
-            public val readResource: PreparedRequest<McpResource.ReadRequest, McpResource.ReadResponse> =
+            public val readResource: PreparedRequest<McpResource.ReadRequest, McpResource.ReadResult> =
                 PreparedRequest(
                     method = McpMethods.Resources.Read,
                     paramSerializer = McpResource.ReadRequest.serializer(),
-                    resultDeserializer = McpResource.ReadResponse.serializer()
+                    resultDeserializer = McpResource.ReadResult.serializer()
                 )
-            public val listTool: PreparedRequest<McpTool.ListRequest, McpTool.ListResponse> =
+            public val listTool: PreparedRequest<McpTool.ListRequest, McpTool.ListResult> =
                 PreparedRequest(
                     method = McpMethods.Tools.List,
                     paramSerializer = McpTool.ListRequest.serializer(),
-                    resultDeserializer = McpTool.ListResponse.serializer()
+                    resultDeserializer = McpTool.ListResult.serializer()
                 )
-            public val callTool: PreparedRequest<McpTool.CallRequest, McpTool.CallResponse> =
+            public val callTool: PreparedRequest<McpTool.CallRequest, McpTool.CallResult> =
                 PreparedRequest(
                     method = McpMethods.Tools.Call,
                     paramSerializer = McpTool.CallRequest.serializer(),
-                    resultDeserializer = McpTool.CallResponse.serializer()
+                    resultDeserializer = McpTool.CallResult.serializer()
                 )
-            public val getCompletion: PreparedRequest<McpCompletion.Request, McpCompletion.Response> =
+            public val getCompletion: PreparedRequest<McpCompletion.Request, McpCompletion.Result> =
                 PreparedRequest(
                     method = McpMethods.Completion.Complete,
                     paramSerializer = McpCompletion.Request.serializer(),
-                    resultDeserializer = McpCompletion.Response.serializer()
+                    resultDeserializer = McpCompletion.Result.serializer()
                 )
             public val setLogLevel: PreparedNotification<McpLogging.SetLevelRequest> =
                 PreparedNotification(

@@ -27,7 +27,7 @@ internal class McpClientImpl(
     override val info: McpInit.ClientInfo,
     override val capabilities: McpInit.ClientCapabilities,
     override val onRoot: suspend () -> McpRoot.ListResponse,
-    override val onSampling: suspend (McpSampling.Request) -> McpSampling.Response,
+    override val onSampling: suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult,
     override val onNotification: suspend (McpNotification) -> Unit,
     override val transport: JsonRpcTransport,
     override val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
@@ -50,9 +50,9 @@ internal class McpClientImpl(
                     )
                     McpMethods.Sampling.CreateMessage ->
                         JsonRpc.json.encodeToJsonElement(
-                            McpSampling.Response.serializer(), onSampling(
+                            McpSampling.CreateMessageResult.serializer(), onSampling(
                                 JsonRpc.json.decodeFromJsonElement(
-                                    McpSampling.Request.serializer(),
+                                    McpSampling.CreateMessageRequest.serializer(),
                                     request.params!!
                                 )
                             )

@@ -1,39 +1,41 @@
 package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpConstants
+import io.genkt.mcp.common.McpMethods
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 public sealed interface McpInit {
     @Serializable
-    public data class Request(
+    public data class InitializeRequest(
         public val capabilities: ClientCapabilities,
-        public val clientInfo: ClientInfo,
+        public val clientInfo: Implementation,
         public val protocolVersion: String = McpConstants.ProtocolVersion,
-    )
+    ): McpClientRequest<InitializeResult> {
+        override val method: String get() = McpMethods.Initialize
+    }
 
     @Serializable
-    public data class Response(
+    public data class InitializeResult(
         public val capabilities: ServerCapabilities,
-        public val serverInfo: ServerInfo,
-        public val instructions: String,
+        public val serverInfo: Implementation,
+        public val instructions: String? = null,
         public val protocolVersion: String = McpConstants.ProtocolVersion,
     )
 
-    @Serializable
-    public data class ServerInfo(
-        public val name: String,
-        public val version: String,
-    )
+    public data object InitializedNotification: McpClientNotification {
+        override val method: String get() = McpMethods.Notifications.Initialized
+    }
 
     @Serializable
-    public data class ClientInfo(
+    public data class Implementation(
         public val name: String,
         public val version: String,
     )
 
     @Serializable
     public data class ClientCapabilities(
+        public val experimental: JsonObject? = null,
         public val sampling: JsonObject? = null,
         public val roots: RootsCapability? = null,
     ) {
@@ -47,10 +49,10 @@ public sealed interface McpInit {
     public data class ServerCapabilities(
         val experimental: JsonObject? = null,
         val logging: JsonObject? = null,
+        val completions: JsonObject? = null,
         val prompts: PromptsCapability? = null,
         val resources: ResourcesCapability? = null,
         val tools: ToolsCapability? = null,
-        val completion: JsonObject? = null,
     ) {
         @Serializable
         public data class PromptsCapability(

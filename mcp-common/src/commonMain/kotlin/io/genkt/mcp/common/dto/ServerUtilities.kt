@@ -1,47 +1,47 @@
 package io.genkt.mcp.common.dto
 
+import io.genkt.mcp.common.McpMethods
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import kotlin.jvm.JvmInline
 
-public sealed interface McpCompletion {
+@Serializable
+public data class McpCompletion(
+    public val values: List<String>,
+    public val total: Int? = null,
+    public val hasMore: Boolean? = null,
+) {
     @Serializable
     public data class Request(
         public val ref: Reference,
         public val argument: Argument,
-    )
+    ) : McpClientRequest<Result> {
+        override val method: String get() = McpMethods.Completion.Complete
+
+        @Serializable
+        public data class Argument(
+            public val name: String,
+            public val value: String,
+        )
+    }
 
     @Serializable(with = McpCompletionReferenceSerializer::class)
     public sealed interface Reference {
-        @Serializable(with = McpCompletionPromptReferenceSerializer::class)
-        @JvmInline
-        public value class Prompt(
+        @Serializable
+        public data class Prompt(
+            public val type: String = "ref/prompt",
             public val name: String,
         ) : Reference
 
-        @Serializable(with = McpCompletionResourceReferenceSerializer::class)
-        @JvmInline
-        public value class Resource(
+        @Serializable
+        public data class Resource(
+            public val type: String = "ref/resource",
             public val uri: String,
         ) : Reference
     }
 
     @Serializable
-    public data class Argument(
-        public val name: String,
-        public val value: String,
-    )
-
-    @Serializable
-    public data class Response(
-        public val completion: Completion,
-    )
-
-    @Serializable
-    public data class Completion(
-        public val values: List<String>,
-        public val total: Int,
-        public val hasMore: Boolean,
+    public data class Result(
+        public val completion: McpCompletion,
     )
 }
 
@@ -55,12 +55,19 @@ public sealed interface McpLogging {
     @Serializable
     public data class SetLevelRequest(
         public val level: Level,
-    )
+    ) : McpClientRequest<SetLevelResult> {
+        override val method: String get() = McpMethods.Logging.SetLevel
+    }
+
+    @Serializable
+    public data object SetLevelResult
 
     @Serializable
     public data class LogMessage(
         public val level: Level,
         public val logger: String,
         public val data: JsonElement,
-    ): McpNotification
+    ) : McpServerNotification {
+        override val method: String get() = McpMethods.Notifications.Message
+    }
 }
