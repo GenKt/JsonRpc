@@ -12,6 +12,9 @@ import io.genkt.mcp.common.withProgressToken
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.JsonObject
@@ -55,6 +58,7 @@ public interface McpClient {
     public val jsonRpcClient: JsonRpcClient
 
     public val coroutineScope: CoroutineScope
+    public val mutex: Mutex
 
     public val progressMap: MutableMap<String, ProgressingResult<*>>
 
@@ -100,7 +104,19 @@ public interface McpClient {
                 return ProgressResult(
                     deferred
                 ).apply {
-                    if (progress) mcpClient.progressMap[token] = this
+                    if (progress) {
+                        mcpClient.mutex.withLock {
+                            mcpClient.progressMap[token] = this@apply
+                        }
+                        deferred.invokeOnCompletion {
+                            mcpClient.coroutineScope.launch {
+                                mcpClient.mutex.withLock {
+                                    mcpClient.progressMap.remove(token)
+                                }
+                                this@apply.progressChannel.close()
+                            }
+                        }
+                    }
                 }
             }
         }

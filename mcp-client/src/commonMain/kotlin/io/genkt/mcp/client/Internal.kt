@@ -34,7 +34,7 @@ internal class McpClientImpl(
     override val progressTokenGenerator: () -> String = defaultProgressTokenGenerator,
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
-    private val requestMutex = Mutex()
+    override val mutex = Mutex()
     private val requestMap = mutableMapOf<RequestId, Deferred<JsonElement>>()
     override val coroutineScope = transport.coroutineScope.newChild(additionalContext)
     override val progressMap: MutableMap<String, ProgressingResult<*>> = mutableMapOf()
@@ -62,12 +62,12 @@ internal class McpClientImpl(
                     else -> error("Unknown method: ${request.method}")
                 }
             }
-            requestMutex.withLock {
+            mutex.withLock {
                 requestMap[request.id] = deferred
             }
             deferred.invokeOnCompletion {
                 coroutineScope.launch {
-                    requestMutex.withLock {
+                    mutex.withLock {
                         requestMap.remove(request.id)
                     }
                 }
