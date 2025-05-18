@@ -12,6 +12,7 @@ public sealed interface McpUtilities {
     }
 
     public data object Pong
+    @Serializable
     public data class Cancellation(
         public val requestId: RequestId,
         public val reason: String? = null,
@@ -26,7 +27,6 @@ public sealed interface McpProgress {
     public data class ClientRequest<Result, Request : McpClientRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-        public override val progressChannel: SendChannel<ProgressNotification>,
     ) : McpClientProgressRequest<Result> {
         override val method: String by request::method
     }
@@ -35,7 +35,6 @@ public sealed interface McpProgress {
     public data class ServerRequest<Result, Request : McpServerRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-        public override val progressChannel: SendChannel<ProgressNotification>,
     ) : McpServerProgressRequest<Result> {
         override val method: String by request::method
     }
