@@ -26,6 +26,7 @@ public sealed interface McpClientNotification: McpClientCall<Unit> {
     public companion object
 }
 public sealed interface McpServerRequest<out R>: McpServerCall<R> {
+    public val resultDeserializer: DeserializationStrategy<R>
     public companion object
 }
 public sealed interface McpServerNotification: McpServerCall<Unit> {

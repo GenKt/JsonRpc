@@ -30,7 +30,7 @@ public fun McpServerRequest.Companion.of(request: JsonRpcRequest): McpServerRequ
     val requestNoProgress = parseMcpServerRequestNoProgress(request.method, request.params)
         ?: return null
     if (progressToken != null) {
-        return McpProgress.ServerRequest(
+        return McpProgress.RawServerRequest(
             requestNoProgress,
             if (progressToken.isString) McpProgress.Token.StringToken(progressToken.content)
             else McpProgress.Token.IntegerToken(progressToken.long),
