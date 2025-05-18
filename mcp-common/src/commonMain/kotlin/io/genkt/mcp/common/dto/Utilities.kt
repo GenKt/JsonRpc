@@ -2,8 +2,8 @@ package io.genkt.mcp.common.dto
 
 import io.genkt.jsonrpc.RequestId
 import io.genkt.mcp.common.McpMethods
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import kotlin.jvm.JvmInline
 
 public sealed interface McpUtilities {
@@ -12,6 +12,7 @@ public sealed interface McpUtilities {
     }
 
     public data object Pong
+
     @Serializable
     public data class Cancellation(
         public val requestId: RequestId,
@@ -27,20 +28,16 @@ public sealed interface McpProgress {
     public data class ClientRequest<Result, Request : McpClientRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-    ) : McpClientProgressRequest<Result> {
-        override val method: String by request::method
-    }
+    ) : McpProgressRequest<Result, McpClientRequest<Result>>, McpClientRequest<Result> by request
 
     @Serializable
     public data class ServerRequest<Result, Request : McpServerRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-    ) : McpServerProgressRequest<Result> {
-        override val method: String by request::method
-    }
+    ) : McpProgressRequest<Result, McpServerRequest<Result>>, McpServerRequest<Result> by request
 
     @Serializable
-    public data class ProgressNotification(
+    public data class Notification(
         public val progressToken: Token,
         public val progress: Double,
         public val total: Double? = null,

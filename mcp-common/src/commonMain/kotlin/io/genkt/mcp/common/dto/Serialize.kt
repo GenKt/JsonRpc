@@ -59,7 +59,7 @@ public fun McpServerNotification.Companion.of(notification: JsonRpcNotification)
         McpMethods.Notifications.Resources.Updated -> McpResource.UpdatedNotification.serializer()
         McpMethods.Notifications.Tools.ListChanged -> McpTool.ListChangedNotification.serializer()
         McpMethods.Notifications.Message -> McpLogging.LogMessage.serializer()
-        McpMethods.Notifications.Progress -> McpProgress.ProgressNotification.serializer()
+        McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
         else -> return null
     }
     return JsonRpc.json.decodeFromJsonElement(deserializer, notification.params ?: error("JsonRpc param is null"))
