@@ -7,8 +7,6 @@ import io.github.stream29.streamlin.DelegatingSerializer
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.PolymorphicKind
-import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonObject
@@ -16,14 +14,15 @@ import kotlinx.serialization.json.jsonPrimitive
 
 internal object JsonRpcMessageSerializer :
     KSerializer<JsonRpcMessage> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.JsonRpcMessage", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.JsonRpcMessage",
+        childSerializers = listOf(JsonRpcClientMessageSerializer, JsonRpcServerMessageSerializer),
+        selectSerializer = {
             when (it) {
                 is JsonRpcClientMessage -> JsonRpcClientMessageSerializer
                 is JsonRpcServerMessage -> JsonRpcServerMessageSerializer
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             if (element is JsonArray) {
                 if (element.isEmpty())
                     return@JsonPolymorphicSerializer JsonRpcClientMessageBatch.serializer()
@@ -40,14 +39,15 @@ internal object JsonRpcMessageSerializer :
 
 internal object JsonRpcClientMessageSerializer :
     KSerializer<JsonRpcClientMessage> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.JsonRpcClientMessage", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.JsonRpcClientMessage",
+        childSerializers = listOf(JsonRpcClientSingleMessageSerializer, JsonRpcClientMessageBatch.serializer()),
+        selectSerializer = {
             when (it) {
                 is JsonRpcClientSingleMessage -> JsonRpcClientSingleMessageSerializer
                 is JsonRpcClientMessageBatch -> JsonRpcClientMessageBatch.serializer()
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             if (element is JsonArray) JsonRpcClientMessageBatch.serializer()
             else JsonRpcClientSingleMessageSerializer
         }
@@ -55,14 +55,15 @@ internal object JsonRpcClientMessageSerializer :
 
 internal object JsonRpcClientSingleMessageSerializer :
     KSerializer<JsonRpcClientSingleMessage> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.JsonRpcClientSingleMessage", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.JsonRpcClientSingleMessage",
+        childSerializers = listOf(JsonRpcRequest.serializer(), JsonRpcNotification.serializer()),
+        selectSerializer = {
             when (it) {
                 is JsonRpcRequest -> JsonRpcRequest.serializer()
                 is JsonRpcNotification -> JsonRpcNotification.serializer()
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             when {
                 element.jsonObject.contains("id") -> JsonRpcRequest.serializer()
                 else -> JsonRpcNotification.serializer()
@@ -72,14 +73,15 @@ internal object JsonRpcClientSingleMessageSerializer :
 
 internal object JsonRpcServerMessageSerializer :
     KSerializer<JsonRpcServerMessage> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.JsonRpcServerMessage", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.JsonRpcServerMessage",
+        childSerializers = listOf(JsonRpcServerSingleMessageSerializer, JsonRpcServerMessageBatch.serializer()),
+        selectSerializer = {
             when (it) {
                 is JsonRpcServerSingleMessage -> JsonRpcServerSingleMessageSerializer
                 is JsonRpcServerMessageBatch -> JsonRpcServerMessageBatch.serializer()
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             if (element is JsonArray) JsonRpcServerMessageBatch.serializer()
             else JsonRpcServerSingleMessageSerializer
         }
@@ -87,14 +89,15 @@ internal object JsonRpcServerMessageSerializer :
 
 internal object JsonRpcServerSingleMessageSerializer :
     KSerializer<JsonRpcServerSingleMessage> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.JsonRpcServerSingleMessage", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.JsonRpcServerSingleMessage",
+        childSerializers = listOf(JsonRpcSuccessResponse.serializer(), JsonRpcFailResponse.serializer()),
+        selectSerializer = {
             when (it) {
                 is JsonRpcSuccessResponse -> JsonRpcSuccessResponse.serializer()
                 is JsonRpcFailResponse -> JsonRpcFailResponse.serializer()
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             val jsonObject = element.jsonObject
             when {
                 jsonObject.contains("result") -> JsonRpcSuccessResponse.serializer()
@@ -106,15 +109,16 @@ internal object JsonRpcServerSingleMessageSerializer :
 
 internal object RequestIdSerializer :
     KSerializer<RequestId> by JsonPolymorphicSerializer(
-        buildSerialDescriptor("io.github.genkt.jsonrpc.RequestId", PolymorphicKind.SEALED),
-        {
+        serialName = "io.github.genkt.jsonrpc.RequestId",
+        childSerializers = listOf(RequestId.NumberId.serializer(), RequestId.StringId.serializer(), NullIdSerializer),
+        selectSerializer = {
             when (it) {
                 is RequestId.NumberId -> RequestId.NumberId.serializer()
                 is RequestId.StringId -> RequestId.StringId.serializer()
                 is RequestId.NullId -> NullIdSerializer
             }
         },
-        { element ->
+        selectDeserializer = { element ->
             val jsonPrimitive = element.jsonPrimitive
             when {
                 jsonPrimitive.isString -> RequestId.StringId.serializer()
