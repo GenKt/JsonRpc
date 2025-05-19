@@ -1,11 +1,9 @@
 package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.DeserializationStrategy
-import kotlinx.serialization.json.JsonElement
 
 public sealed interface McpCall<out R> {
     public val method: String
-    public val param: JsonElement
     public companion object
 }
 public sealed interface McpProgressRequest<out Result, out Request>: McpCall<Result> {
