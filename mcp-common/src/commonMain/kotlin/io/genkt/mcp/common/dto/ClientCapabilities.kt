@@ -1,6 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpMethods
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlin.jvm.JvmInline
@@ -11,8 +12,10 @@ public data class McpRoot(
     public val name: String? = null,
 ) {
     @Serializable
-    public data object ListRequest: McpServerRequest<ListResponse> {
+    public data object ListRequest : McpServerRequest<ListResponse> {
         override val method: String get() = McpMethods.Roots.List
+        override val resultDeserializer: DeserializationStrategy<ListResponse>
+            get() = ListResponse.serializer()
     }
 
     @Serializable
@@ -21,7 +24,7 @@ public data class McpRoot(
     )
 
     @Serializable
-    public data object ListChangedNotification: McpClientNotification {
+    public data object ListChangedNotification : McpClientNotification {
         override val method: String get() = McpMethods.Notifications.Roots.ListChanged
     }
 }
@@ -37,8 +40,10 @@ public sealed interface McpSampling {
         public val maxTokens: Long? = null,
         public val stopSequences: List<String>? = null,
         public val metadata: JsonObject? = null,
-    ): McpServerRequest<CreateMessageResult> {
+    ) : McpServerRequest<CreateMessageResult> {
         override val method: String get() = McpMethods.Sampling.CreateMessage
+        override val resultDeserializer: DeserializationStrategy<CreateMessageResult>
+            get() = CreateMessageResult.serializer()
     }
 
     @Suppress("EnumEntryName")

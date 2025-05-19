@@ -2,6 +2,7 @@ package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpConstants
 import io.genkt.mcp.common.McpMethods
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -13,6 +14,8 @@ public sealed interface McpInit {
         public val protocolVersion: String = McpConstants.ProtocolVersion,
     ): McpClientRequest<InitializeResult> {
         override val method: String get() = McpMethods.Initialize
+        override val resultDeserializer: DeserializationStrategy<InitializeResult>
+            get() = InitializeResult.serializer()
     }
 
     @Serializable
@@ -23,6 +26,7 @@ public sealed interface McpInit {
         public val protocolVersion: String = McpConstants.ProtocolVersion,
     )
 
+    @Serializable
     public data object InitializedNotification: McpClientNotification {
         override val method: String get() = McpMethods.Notifications.Initialized
     }

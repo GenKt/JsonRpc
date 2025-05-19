@@ -1,6 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpMethods
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -16,6 +17,8 @@ public data class McpPrompt(
         public override val cursor: McpPaginated.Cursor? = null
     ): McpClientRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Prompts.List
+        override val resultDeserializer: DeserializationStrategy<ListResult>
+            get() = ListResult.serializer()
     }
 
     @Serializable
@@ -30,6 +33,8 @@ public data class McpPrompt(
         public val arguments: Map<String, String>
     ): McpClientRequest<GetResult> {
         override val method: String get() = McpMethods.Prompts.Get
+        override val resultDeserializer: DeserializationStrategy<GetResult>
+            get() = GetResult.serializer()
     }
 
     @Serializable
@@ -70,6 +75,8 @@ public data class McpResource(
         public override val cursor: McpPaginated.Cursor? = null
     ): McpClientRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Resources.List
+        override val resultDeserializer: DeserializationStrategy<ListResult>
+            get() = ListResult.serializer()
     }
 
     @Serializable
@@ -83,6 +90,8 @@ public data class McpResource(
         public override val cursor: McpPaginated.Cursor? = null
     ): McpClientRequest<ListTemplateResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Resources.Templates.List
+        override val resultDeserializer: DeserializationStrategy<ListTemplateResult>
+            get() = ListTemplateResult.serializer()
     }
 
     @Serializable
@@ -95,6 +104,8 @@ public data class McpResource(
         public val uri: String,
     ): McpClientRequest<ReadResult> {
         override val method: String get() = McpMethods.Resources.Read
+        override val resultDeserializer: DeserializationStrategy<ReadResult>
+            get() = ReadResult.serializer()
     }
 
     @Serializable
@@ -121,6 +132,8 @@ public data class McpResource(
         public val uri: String,
     ): McpClientRequest<SubscribeResult> {
         override val method: String get() = McpMethods.Resources.Subscribe
+        override val resultDeserializer: DeserializationStrategy<SubscribeResult>
+            get() = SubscribeResult.serializer()
     }
 
     @Serializable
@@ -131,6 +144,8 @@ public data class McpResource(
         public val uri: String,
     ): McpClientRequest<UnsubscribeResult> {
         override val method: String get() = McpMethods.Resources.Unsubscribe
+        override val resultDeserializer: DeserializationStrategy<UnsubscribeResult>
+            get() = UnsubscribeResult.serializer()
     }
 
     @Serializable
@@ -163,6 +178,8 @@ public data class McpTool(
         public override val cursor: McpPaginated.Cursor? = null
     ): McpClientRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Tools.List
+        override val resultDeserializer: DeserializationStrategy<ListResult>
+            get() = ListResult.serializer()
     }
 
     @Serializable
@@ -177,6 +194,8 @@ public data class McpTool(
         public val arguments: JsonObject
     ): McpClientRequest<CallResult> {
         override val method: String get() = McpMethods.Tools.Call
+        override val resultDeserializer: DeserializationStrategy<CallResult>
+            get() = CallResult.serializer()
     }
 
     @Serializable

@@ -2,27 +2,30 @@ package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.Serializable
 
-@Serializable
 public sealed interface McpContent {
-    @Serializable
+    @Serializable(with = McpResourceContentSerializer::class)
     public sealed interface Resource {
         public val uri: String
         public val mimeType: String?
+
         @Serializable
         public data class Text(
             override val uri: String,
             override val mimeType: String? = null,
             val text: String,
-        ): Resource
+        ) : Resource
+
         @Serializable
         public data class Blob(
             override val uri: String,
             override val mimeType: String? = null,
             val blob: String,
-        ): Resource
+        ) : Resource
     }
 
+    @Serializable(with = McpPromptContentSerializer::class)
     public sealed interface Prompt
+    @Serializable(with = McpSamplingContentSerializer::class)
     public sealed interface Sampling
 
     @Serializable
@@ -30,7 +33,7 @@ public sealed interface McpContent {
         public val type: String = "text",
         public val text: String,
         public val annotations: Annotations? = null,
-    ) : McpContent, Prompt, Sampling
+    ) : Prompt, Sampling
 
     @Serializable
     public data class Image(
@@ -38,7 +41,7 @@ public sealed interface McpContent {
         public val data: String,
         public val mimeType: String,
         public val annotations: Annotations? = null,
-    ) : McpContent, Prompt, Sampling
+    ) : Prompt, Sampling
 
     @Serializable
     public data class Audio(
@@ -46,14 +49,14 @@ public sealed interface McpContent {
         public val data: String,
         public val mimeType: String,
         public val annotations: Annotations? = null,
-    ) : McpContent, Prompt, Sampling
+    ) : Prompt, Sampling
 
     @Serializable
     public data class EmbeddedResource(
         public val type: String = "resource",
         public val resource: Resource,
         public val annotations: Annotations? = null,
-    ): Prompt
+    ) : Prompt
 
     @Serializable
     public data class Annotations(

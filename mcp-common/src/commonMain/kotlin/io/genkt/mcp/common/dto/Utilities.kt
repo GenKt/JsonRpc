@@ -8,10 +8,13 @@ import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 
 public sealed interface McpUtilities {
+    @Serializable
     public data object Ping : McpClientRequest<Pong>, McpServerRequest<Pong> {
         override val method: String get() = McpMethods.Ping
+        override val resultDeserializer: DeserializationStrategy<Pong> get() = Pong.serializer()
     }
 
+    @Serializable
     public data object Pong
 
     @Serializable
@@ -24,12 +27,12 @@ public sealed interface McpUtilities {
 }
 
 public sealed interface McpProgress {
-    // TODO: serializing
     /**
      * This request wraps a [RawClientRequest] to enable sending [Notification]s.
      * The server developer can pass a [progressChannel] to receive [Notification]s.
      * The client developer can send [Notification]s to the server through [progressChannel].
      */
+    @Serializable(with = McpClientProgressRequestSerializer::class)
     public data class ClientRequest<Result, Request : McpClientRequest<Result>>(
         public val rawRequest: RawClientRequest<Result, Request>,
         public val progressChannel: SendChannel<Notification>,
@@ -42,6 +45,7 @@ public sealed interface McpProgress {
      * The server developer can pass a [progressChannel] to receive [Notification]s.
      * The client developer can send [Notification]s to the server through [progressChannel].
      */
+    @Serializable(with = McpServerProgressRequestSerializer::class)
     public data class ServerRequest<Result, Request : McpServerRequest<Result>>(
         public val rawRequest: RawServerRequest<Result, Request>,
         public val progressChannel: SendChannel<Notification>,
@@ -53,7 +57,7 @@ public sealed interface McpProgress {
      * This is the raw request content transferred to the server.
      * The server should wrap it as [ServerRequest] to enable sending [Notification]s.
      */
-    @Serializable
+    @Serializable(with = RawMcpClientProgressRequestSerializer::class)
     public data class RawClientRequest<Result, Request : McpClientRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
@@ -79,6 +83,7 @@ public sealed interface McpProgress {
         override val method: String get() = McpMethods.Notifications.Progress
     }
 
+    // TODO: Serialization
     @Serializable
     public sealed interface Token {
         @Serializable
