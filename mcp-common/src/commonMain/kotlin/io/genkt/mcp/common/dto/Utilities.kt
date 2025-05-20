@@ -36,9 +36,7 @@ public sealed interface McpProgress {
     public data class ClientRequest<Result, Request : McpClientRequest<Result>>(
         public val rawRequest: RawClientRequest<Result, Request>,
         public val progressChannel: SendChannel<Notification>,
-    ) : McpProgressRequest<Result, McpClientRequest<Result>> by rawRequest, McpClientRequest<Result> {
-        public override val resultDeserializer: DeserializationStrategy<Result> by rawRequest::resultDeserializer
-    }
+    ) : McpProgressRequest<Result, McpClientRequest<Result>> by rawRequest, McpClientCall<Result>
 
     /**
      * This request wraps a [RawServerRequest] to enable sending [Notification]s.
@@ -49,9 +47,7 @@ public sealed interface McpProgress {
     public data class ServerRequest<Result, Request : McpServerRequest<Result>>(
         public val rawRequest: RawServerRequest<Result, Request>,
         public val progressChannel: SendChannel<Notification>,
-    ) : McpProgressRequest<Result, McpServerRequest<Result>> by rawRequest, McpServerRequest<Result> {
-        public override val resultDeserializer: DeserializationStrategy<Result> by rawRequest::resultDeserializer
-    }
+    ) : McpProgressRequest<Result, McpServerRequest<Result>> by rawRequest, McpClientCall<Result>
 
     /**
      * This is the raw request content transferred to the server.
@@ -61,7 +57,7 @@ public sealed interface McpProgress {
     public data class RawClientRequest<Result, Request : McpClientRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-    ) : McpProgressRequest<Result, McpClientRequest<Result>>, McpClientRequest<Result> by request
+    ) : McpProgressRequest<Result, McpClientRequest<Result>>, McpClientCall<Result> by request
 
     /**
      * This is the raw request content transferred to the client.
@@ -71,7 +67,7 @@ public sealed interface McpProgress {
     public data class RawServerRequest<Result, Request : McpServerRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
-    ) : McpProgressRequest<Result, McpServerRequest<Result>>, McpServerRequest<Result> by request
+    ) : McpProgressRequest<Result, McpServerRequest<Result>>, McpServerCall<Result> by request
 
     @Serializable
     public data class Notification(
