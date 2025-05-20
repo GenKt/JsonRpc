@@ -21,6 +21,117 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 
+internal object McpClientRequestSerializer
+    : KSerializer<McpClientRequest<*>> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpClientRequest",
+    childSerializers = listOf(
+        McpTool.CallRequest.serializer(),
+        McpPrompt.GetRequest.serializer(),
+        McpInit.InitializeRequest.serializer(),
+        McpPrompt.ListRequest.serializer(),
+        McpResource.ListRequest.serializer(),
+        McpTool.ListRequest.serializer(),
+        McpResource.ListTemplateRequest.serializer(),
+        McpUtilities.Ping.serializer(),
+        McpResource.ReadRequest.serializer(),
+        McpCompletion.Request.serializer(),
+        McpLogging.SetLevelRequest.serializer(),
+        McpResource.SubscribeRequest.serializer(),
+        McpResource.UnsubscribeRequest.serializer(),
+    ),
+    selectSerializer = { clientRequest ->
+        when (clientRequest) {
+            is McpTool.CallRequest -> McpTool.CallRequest.serializer()
+            is McpPrompt.GetRequest -> McpPrompt.GetRequest.serializer()
+            is McpInit.InitializeRequest -> McpInit.InitializeRequest.serializer()
+            is McpPrompt.ListRequest -> McpPrompt.ListRequest.serializer()
+            is McpResource.ListRequest -> McpResource.ListRequest.serializer()
+            is McpTool.ListRequest -> McpTool.ListRequest.serializer()
+            is McpResource.ListTemplateRequest -> McpResource.ListTemplateRequest.serializer()
+            is McpUtilities.Ping -> McpUtilities.Ping.serializer()
+            is McpResource.ReadRequest -> McpResource.ReadRequest.serializer()
+            is McpCompletion.Request -> McpCompletion.Request.serializer()
+            is McpLogging.SetLevelRequest -> McpLogging.SetLevelRequest.serializer()
+            is McpResource.SubscribeRequest -> McpResource.SubscribeRequest.serializer()
+            is McpResource.UnsubscribeRequest -> McpResource.UnsubscribeRequest.serializer()
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpClientRequest")
+    }
+)
+
+internal object McpServerRequestSerializer
+    : KSerializer<McpServerRequest<*>> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpServerRequest",
+    childSerializers = listOf(
+        McpSampling.CreateMessageRequest.serializer(),
+        McpRoot.ListRequest.serializer(),
+        McpUtilities.Ping.serializer()
+    ),
+    selectSerializer = { serverRequest ->
+        when (serverRequest) {
+            is McpSampling.CreateMessageRequest -> McpSampling.CreateMessageRequest.serializer()
+            is McpRoot.ListRequest -> McpRoot.ListRequest.serializer()
+            is McpUtilities.Ping -> McpUtilities.Ping.serializer()
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpServerRequest")
+    }
+)
+
+internal object McpServerNotificationSerializer
+    : KSerializer<McpServerNotification> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpServerNotification",
+    childSerializers = listOf(
+        McpUtilities.Cancellation.serializer(),
+        McpPrompt.ListChangedNotification.serializer(),
+        McpResource.ListChangedNotification.serializer(),
+        McpTool.ListChangedNotification.serializer(),
+        McpLogging.LogMessage.serializer(),
+        McpProgress.Notification.serializer(),
+        McpResource.UpdatedNotification.serializer(),
+    ),
+    selectSerializer = { serverNotification ->
+        when (serverNotification) {
+            is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
+            is McpPrompt.ListChangedNotification -> McpPrompt.ListChangedNotification.serializer()
+            is McpResource.ListChangedNotification -> McpResource.ListChangedNotification.serializer()
+            is McpTool.ListChangedNotification -> McpTool.ListChangedNotification.serializer()
+            is McpLogging.LogMessage -> McpLogging.LogMessage.serializer()
+            is McpProgress.Notification -> McpProgress.Notification.serializer()
+            is McpResource.UpdatedNotification -> McpResource.UpdatedNotification.serializer()
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpServerNotification")
+    }
+)
+
+internal object McpClientNotificationSerializer
+    : KSerializer<McpClientNotification> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpClientNotification",
+    childSerializers = listOf(
+        McpUtilities.Cancellation.serializer(),
+        McpInit.InitializedNotification.serializer(),
+        McpRoot.ListChangedNotification.serializer(),
+        McpProgress.Notification.serializer(),
+    ),
+    selectSerializer = { clientNotification ->
+        when (clientNotification) {
+            is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
+            is McpInit.InitializedNotification -> McpInit.InitializedNotification.serializer()
+            is McpRoot.ListChangedNotification -> McpRoot.ListChangedNotification.serializer()
+            is McpProgress.Notification -> McpProgress.Notification.serializer()
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpClientNotification")
+    }
+)
+
+
 internal object McpResourceContentSerializer
     : KSerializer<McpContent.Resource> by JsonPolymorphicSerializer(
     serialName = "io.genkt.mcp.common.dto.McpContent.Resource",
@@ -35,7 +146,7 @@ internal object McpResourceContentSerializer
         }
     },
     selectDeserializer = { jsonElement ->
-        jsonElement as? JsonObject ?: throw IllegalArgumentException("Invalid McpContent.Resource: $jsonElement")
+        jsonElement.checkJsonObjectOrThrow { "Invalid McpContent.Resource: $jsonElement" }
         when {
             jsonElement.contains("text") -> McpContent.Resource.Text.serializer()
             jsonElement.contains("blob") -> McpContent.Resource.Blob.serializer()
@@ -61,7 +172,7 @@ internal object McpPromptContentSerializer
         }
     },
     selectDeserializer = { jsonElement ->
-        jsonElement as? JsonObject ?: throw IllegalArgumentException("Invalid McpContent.Prompt: $jsonElement")
+        jsonElement.checkJsonObjectOrThrow { "Invalid McpContent.Prompt: $jsonElement" }
         when (jsonElement["type"]?.jsonPrimitive?.content) {
             "text" -> McpContent.Text.serializer()
             "image" -> McpContent.Image.serializer()
@@ -88,7 +199,7 @@ internal object McpSamplingContentSerializer
         }
     },
     selectDeserializer = { jsonElement ->
-        jsonElement as? JsonObject ?: throw IllegalArgumentException("Invalid McpContent.Sampling: $jsonElement")
+        jsonElement.checkJsonObjectOrThrow { "Invalid McpContent.Sampling: $jsonElement" }
         when (jsonElement["type"]?.jsonPrimitive?.content) {
             "text" -> McpContent.Text.serializer()
             "image" -> McpContent.Image.serializer()
@@ -112,7 +223,7 @@ internal object McpCompletionReferenceSerializer
         }
     },
     selectDeserializer = { jsonElement ->
-        jsonElement as? JsonObject ?: throw IllegalArgumentException("Invalid McpCompletion.Reference: $jsonElement")
+        jsonElement.checkJsonObjectOrThrow { "Invalid McpCompletion.Reference: $jsonElement" }
         when (jsonElement["type"]?.jsonPrimitive?.content) {
             "ref/resource" -> McpCompletion.Reference.Resource.serializer()
             "ref/prompt" -> McpCompletion.Reference.Prompt.serializer()
@@ -136,7 +247,7 @@ internal class McpClientProgressRequestSerializer<Result, Request : McpClientReq
     }
 
     override fun deserialize(decoder: Decoder): McpProgress.ClientRequest<Result, Request> {
-        throw UnsupportedOperationException("You shouldn't deserialize McpProgress.ClientRequest. Deserialize McpProgress.RawClientRequest instead.")
+        errorRequireJsonRpcMethod("McpProgress.ClientRequest. Deserialize McpProgress.RawClientRequest instead")
     }
 }
 
@@ -151,7 +262,7 @@ internal class McpServerProgressRequestSerializer<Result, Request : McpServerReq
     }
 
     override fun deserialize(decoder: Decoder): McpProgress.ServerRequest<Result, Request> {
-        throw UnsupportedOperationException("You shouldn't deserialize McpProgress.ServerRequest. Deserialize McpProgress.RawServerRequest instead.")
+        errorRequireJsonRpcMethod("McpProgress.ServerRequest. Deserialize McpProgress.RawServerRequest instead")
     }
 }
 
@@ -219,7 +330,7 @@ internal object McpProgressTokenSerializer
         }
     },
     selectDeserializer = { jsonElement ->
-        jsonElement as? JsonPrimitive ?: throw IllegalArgumentException("Invalid McpProgress.Token: $jsonElement")
+        jsonElement.checkJsonPrimitiveOrThrow { "Invalid McpProgress.Token: $jsonElement" }
         when {
             jsonElement.isString -> McpProgress.Token.StringToken.serializer()
             jsonElement.longOrNull != null -> McpProgress.Token.IntegerToken.serializer()
@@ -244,11 +355,27 @@ private fun JsonObject.addProgressToken(
     this@addProgressToken.forEach { (key, value) -> put(key, value) }
 }
 
+private fun errorRequireJsonRpcMethod(serialName: String): Nothing {
+    throw UnsupportedOperationException("You shouldn't deserialize $serialName with unknown JsonRpc method.")
+}
+
 @OptIn(InternalSerializationApi::class)
 private fun buildContextualSerialDescriptor(serialName: String): SerialDescriptor = buildSerialDescriptor(
     serialName,
     SerialKind.CONTEXTUAL
 )
+
+@OptIn(ExperimentalContracts::class)
+private fun JsonElement.checkJsonObjectOrThrow(message: JsonElement.() -> String = { "Invalid call: $this" }) {
+    contract { returns() implies (this@checkJsonObjectOrThrow is JsonObject) }
+    this as? JsonObject ?: throw IllegalArgumentException(message())
+}
+
+@OptIn(ExperimentalContracts::class)
+private fun JsonElement.checkJsonPrimitiveOrThrow(message: JsonElement.() -> String = { "Invalid call: $this" }) {
+    contract { returns() implies (this@checkJsonPrimitiveOrThrow is JsonPrimitive) }
+    this as? JsonPrimitive ?: throw IllegalArgumentException(message())
+}
 
 private fun JsonObject.progressTokenOrThrow(): JsonElement =
     this.getOrElse("_meta") { throw IllegalArgumentException("Missing '_meta' field in progress request: $this") }

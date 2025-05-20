@@ -1,6 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 
 public sealed interface McpCall<out R> {
@@ -31,19 +32,21 @@ public sealed interface McpClientRequest<out R> : McpClientCall<R> {
     public companion object
 }
 
-@Serializable
+@Serializable(with = McpClientNotificationSerializer::class)
 public sealed interface McpClientNotification : McpClientCall<Unit> {
     public companion object
 }
 
-@Serializable
+@Serializable(with = McpServerRequestSerializer::class)
 public sealed interface McpServerRequest<out R> : McpServerCall<R> {
     public val resultDeserializer: DeserializationStrategy<R>
 
-    public companion object
+    public companion object {
+        public fun serializer(): KSerializer<McpServerRequest<*>> = McpServerRequestSerializer
+    }
 }
 
-@Serializable
+@Serializable(with = McpServerNotificationSerializer::class)
 public sealed interface McpServerNotification : McpServerCall<Unit> {
     public companion object
 }
