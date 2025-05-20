@@ -67,7 +67,7 @@ public sealed interface McpProgress {
      * This is the raw request content transferred to the client.
      * The client should wrap it as [ClientRequest] to enable sending [Notification]s.
      */
-    @Serializable
+    @Serializable(with = RawMcpServerProgressRequestSerializer::class)
     public data class RawServerRequest<Result, Request : McpServerRequest<Result>>(
         public override val request: Request,
         public override val token: Token,
@@ -84,7 +84,7 @@ public sealed interface McpProgress {
     }
 
     // TODO: Serialization
-    @Serializable
+    @Serializable(with = McpProgressTokenSerializer::class)
     public sealed interface Token {
         @Serializable
         @JvmInline

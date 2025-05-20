@@ -8,12 +8,17 @@ import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.putJsonObject
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 
 internal object McpResourceContentSerializer
@@ -151,41 +156,115 @@ internal class McpServerProgressRequestSerializer<Result, Request : McpServerReq
 }
 
 internal class RawMcpClientProgressRequestSerializer<Result, Request : McpClientRequest<Result>>(
+    @Suppress("unused")
     resultSerializer: KSerializer<Result>,
     val requestSerializer: KSerializer<Request>,
 ) : KSerializer<McpProgress.RawClientRequest<Result, Request>> {
-    @OptIn(InternalSerializationApi::class)
-    override val descriptor: SerialDescriptor = buildSerialDescriptor(
-        "io.genkt.mcp.common.dto.McpProgress.RawClientRequest",
-        SerialKind.CONTEXTUAL
-    )
+    override val descriptor: SerialDescriptor =
+        buildContextualSerialDescriptor("io.genkt.mcp.common.dto.McpProgress.RawClientRequest")
 
     override fun serialize(encoder: Encoder, value: McpProgress.RawClientRequest<Result, Request>) {
-        encoder as? JsonEncoder
-            ?: throw IllegalArgumentException("This serializer can be used only with Json format")
+        checkJsonEncoderOrThrow(encoder)
         val requestJson = encoder.json.encodeToJsonElement(requestSerializer, value.request).jsonObject
-        val requestJsonWithProgressToken = buildJsonObject {
-            putJsonObject("_meta") {
-                put(
-                    "progressToken",
-                    encoder.json.encodeToJsonElement(
-                        McpProgress.Token.serializer(),
-                        value.token
-                    )
-                )
-            }
-            requestJson.forEach { (key, value) -> put(key, value) }
-        }
+        val requestJsonWithProgressToken = requestJson.addProgressToken(encoder.json, value.token)
         encoder.encodeJsonElement(requestJsonWithProgressToken)
     }
 
     override fun deserialize(decoder: Decoder): McpProgress.RawClientRequest<Result, Request> {
-        decoder as? JsonDecoder
-            ?: throw IllegalArgumentException("This serializer can be used only with Json format")
+        checkJsonDecoderOrThrow(decoder)
         val requestJson = decoder.decodeJsonElement().jsonObject
-        val progressTokenJson = requestJson["_meta"]!!.jsonObject["progressToken"]!!
+        val progressTokenJson = requestJson.progressTokenOrThrow()
         val token = decoder.json.decodeFromJsonElement(McpProgress.Token.serializer(), progressTokenJson)
         val request = decoder.json.decodeFromJsonElement(requestSerializer, requestJson)
         return McpProgress.RawClientRequest(request, token)
     }
+}
+
+internal class RawMcpServerProgressRequestSerializer<Result, Request : McpServerRequest<Result>>(
+    @Suppress("unused")
+    resultSerializer: KSerializer<Result>,
+    val requestSerializer: KSerializer<Request>,
+) : KSerializer<McpProgress.RawServerRequest<Result, Request>> {
+    override val descriptor: SerialDescriptor =
+        buildContextualSerialDescriptor("io.genkt.mcp.common.dto.McpProgress.RawServerRequest")
+
+    override fun serialize(encoder: Encoder, value: McpProgress.RawServerRequest<Result, Request>) {
+        checkJsonEncoderOrThrow(encoder)
+        val requestJson = encoder.json.encodeToJsonElement(requestSerializer, value.request).jsonObject
+        val requestJsonWithProgressToken = requestJson.addProgressToken(encoder.json, value.token)
+        encoder.encodeJsonElement(requestJsonWithProgressToken)
+    }
+
+    override fun deserialize(decoder: Decoder): McpProgress.RawServerRequest<Result, Request> {
+        checkJsonDecoderOrThrow(decoder)
+        val requestJson = decoder.decodeJsonElement().jsonObject
+        val progressTokenJson = requestJson.progressTokenOrThrow()
+        val token = decoder.json.decodeFromJsonElement(McpProgress.Token.serializer(), progressTokenJson)
+        val request = decoder.json.decodeFromJsonElement(requestSerializer, requestJson)
+        return McpProgress.RawServerRequest(request, token)
+    }
+}
+
+internal object McpProgressTokenSerializer
+    : KSerializer<McpProgress.Token> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpProgress.Token",
+    childSerializers = listOf(
+        McpProgress.Token.StringToken.serializer(),
+        McpProgress.Token.IntegerToken.serializer(),
+    ),
+    selectSerializer = { token ->
+        when (token) {
+            is McpProgress.Token.StringToken -> McpProgress.Token.StringToken.serializer()
+            is McpProgress.Token.IntegerToken -> McpProgress.Token.IntegerToken.serializer()
+        }
+    },
+    selectDeserializer = { jsonElement ->
+        jsonElement as? JsonPrimitive ?: throw IllegalArgumentException("Invalid McpProgress.Token: $jsonElement")
+        when {
+            jsonElement.isString -> McpProgress.Token.StringToken.serializer()
+            jsonElement.longOrNull != null -> McpProgress.Token.IntegerToken.serializer()
+            else -> throw IllegalArgumentException("Unknown McpProgress.Token: $jsonElement")
+        }
+    }
+)
+
+private fun JsonObject.addProgressToken(
+    json: Json,
+    token: McpProgress.Token
+): JsonObject = buildJsonObject {
+    putJsonObject("_meta") {
+        put(
+            "progressToken",
+            json.encodeToJsonElement(
+                McpProgress.Token.serializer(),
+                token
+            )
+        )
+    }
+    this@addProgressToken.forEach { (key, value) -> put(key, value) }
+}
+
+@OptIn(InternalSerializationApi::class)
+private fun buildContextualSerialDescriptor(serialName: String): SerialDescriptor = buildSerialDescriptor(
+    serialName,
+    SerialKind.CONTEXTUAL
+)
+
+private fun JsonObject.progressTokenOrThrow(): JsonElement =
+    this.getOrElse("_meta") { throw IllegalArgumentException("Missing '_meta' field in progress request: $this") }
+        .let { it as? JsonObject ?: throw IllegalArgumentException("Invalid '_meta' field in progress request: $this") }
+        .getOrElse("progressToken") { throw IllegalArgumentException("Missing 'progressToken' field in progress request: $this") }
+
+@OptIn(ExperimentalContracts::class)
+private fun checkJsonEncoderOrThrow(encoder: Encoder) {
+    contract { returns() implies (encoder is JsonEncoder) }
+    encoder as? JsonEncoder
+        ?: throw IllegalArgumentException("This serializer can be used only with Json format")
+}
+
+@OptIn(ExperimentalContracts::class)
+private fun checkJsonDecoderOrThrow(encoder: Decoder) {
+    contract { returns() implies (encoder is JsonDecoder) }
+    encoder as? JsonDecoder
+        ?: throw IllegalArgumentException("This serializer can be used only with Json format")
 }
