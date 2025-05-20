@@ -3,6 +3,7 @@ package io.genkt.mcp.common.dto
 import io.genkt.serialization.json.JsonPolymorphicSerializer
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.descriptors.buildSerialDescriptor
@@ -20,6 +21,67 @@ import kotlinx.serialization.json.putJsonObject
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
+internal object McpClientCallSerializer
+    : KSerializer<McpClientCall<*>> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpClientCall",
+    childSerializers = listOf(
+        McpClientNotification.serializer(),
+        McpClientRequest.serializer(),
+        McpProgress.RawClientRequest.serializer(
+            McpClientRequest.serializer(),
+            Unit.serializer() // Actually unused
+        )
+    ),
+    selectSerializer = { clientCall ->
+        when (clientCall) {
+            is McpClientNotification -> McpClientNotification.serializer()
+            is McpClientRequest<*> -> McpClientRequest.serializer()
+            is McpProgress.RawClientRequest<*, *> -> McpProgress.RawClientRequest.serializer(
+                McpClientRequest.serializer(),
+                Unit.serializer() // Actually unused
+            )
+
+            is McpProgress.ClientRequest<*, *> -> errorShouldSerializeRawRequest(
+                "McpProgress.ClientRequest",
+                "McpProgress.RawClientRequest"
+            )
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpClientCall")
+    }
+)
+
+internal object McpServerCallSerializer
+    : KSerializer<McpServerCall<*>> by JsonPolymorphicSerializer(
+    serialName = "io.genkt.mcp.common.dto.McpServerCall",
+    childSerializers = listOf(
+        McpServerNotification.serializer(),
+        McpServerRequest.serializer(),
+        McpProgress.RawServerRequest.serializer(
+            McpServerRequest.serializer(),
+            Unit.serializer() // Actually unused
+        )
+    ),
+    selectSerializer = { serverCall ->
+        when (serverCall) {
+            is McpServerNotification -> McpServerNotification.serializer()
+            is McpServerRequest<*> -> McpServerRequest.serializer()
+            is McpProgress.RawServerRequest<*, *> -> McpProgress.RawServerRequest.serializer(
+                McpServerRequest.serializer(),
+                Unit.serializer() // Actually unused
+            )
+
+            is McpProgress.ServerRequest<*, *> -> errorShouldSerializeRawRequest(
+                "McpProgress.ServerRequest",
+                "McpProgress.RawServerRequest"
+            )
+        }
+    },
+    selectDeserializer = {
+        errorRequireJsonRpcMethod("McpServerCall")
+    }
+)
 
 internal object McpClientRequestSerializer
     : KSerializer<McpClientRequest<*>> by JsonPolymorphicSerializer(
@@ -353,6 +415,10 @@ private fun JsonObject.addProgressToken(
         )
     }
     this@addProgressToken.forEach { (key, value) -> put(key, value) }
+}
+
+private fun errorShouldSerializeRawRequest(wrapped: String, raw: String): Nothing {
+    throw UnsupportedOperationException("You shouldn't serialize $wrapped, serialize $raw instead.")
 }
 
 private fun errorRequireJsonRpcMethod(serialName: String): Nothing {

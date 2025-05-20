@@ -47,7 +47,7 @@ public sealed interface McpProgress {
     public data class ServerRequest<Result, Request : McpServerRequest<Result>>(
         public val rawRequest: RawServerRequest<Result, Request>,
         public val progressChannel: SendChannel<Notification>,
-    ) : McpProgressRequest<Result, McpServerRequest<Result>> by rawRequest, McpClientCall<Result>
+    ) : McpProgressRequest<Result, McpServerRequest<Result>> by rawRequest, McpServerCall<Result>
 
     /**
      * This is the raw request content transferred to the server.

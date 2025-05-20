@@ -15,21 +15,23 @@ public sealed interface McpProgressRequest<out Result, out Request> : McpCall<Re
     public val request: Request
 }
 
-@Serializable
+@Serializable(with = McpServerCallSerializer::class)
 public sealed interface McpServerCall<out R> : McpCall<R> {
     public companion object
 }
 
-@Serializable
+@Serializable(with = McpClientCallSerializer::class)
 public sealed interface McpClientCall<out R> : McpCall<R> {
     public companion object
 }
 
-@Serializable
+@Serializable(with = McpClientRequestSerializer::class)
 public sealed interface McpClientRequest<out R> : McpClientCall<R> {
     public val resultDeserializer: DeserializationStrategy<R>
 
-    public companion object
+    public companion object {
+        public fun serializer(): KSerializer<McpClientRequest<*>> = McpClientRequestSerializer
+    }
 }
 
 @Serializable(with = McpClientNotificationSerializer::class)
