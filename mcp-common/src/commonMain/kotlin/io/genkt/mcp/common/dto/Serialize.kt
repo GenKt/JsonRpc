@@ -26,9 +26,9 @@ internal object McpClientCallSerializer
     serialName = "io.genkt.mcp.common.dto.McpClientCall",
     childSerializers = listOf(
         McpClientNotification.serializer(),
-        McpClientRequest.serializer(),
+        McpClientRequestSerializer,
         McpProgress.RawClientRequest.serializer(
-            McpClientRequest.serializer(),
+            McpClientRequestSerializer,
             Unit.serializer() // Actually unused
         )
     ),
@@ -57,9 +57,9 @@ internal object McpServerCallSerializer
     serialName = "io.genkt.mcp.common.dto.McpServerCall",
     childSerializers = listOf(
         McpServerNotification.serializer(),
-        McpServerRequest.serializer(),
+        McpServerRequestSerializer,
         McpProgress.RawServerRequest.serializer(
-            McpServerRequest.serializer(),
+            McpServerRequestSerializer,
             Unit.serializer() // Actually unused
         )
     ),

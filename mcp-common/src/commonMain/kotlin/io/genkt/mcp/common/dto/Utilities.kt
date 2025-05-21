@@ -96,18 +96,16 @@ public sealed interface McpProgress {
 
     public companion object {
         @OptIn(ExperimentalTime::class)
-        public val defaultTokenGenerator: () -> String = {
+        public val defaultStringTokenGenerator: () -> Token.StringToken = {
             val timestamp = Clock.System.now().toEpochMilliseconds()
-
             val random1 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
             val random2 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
             val random3 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
             val random4 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
             val random5 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
-
             val timestampHex = timestamp.toString(16)
 
-            "prog-$timestampHex-$random1-$random2-$random3-$random4-$random5"
+            Token.StringToken("prog-$timestampHex-$random1-$random2-$random3-$random4-$random5")
         }
     }
 }
