@@ -20,7 +20,7 @@ public sealed interface McpProgressRequest<out Result, out Request> : McpCall<Re
 public sealed interface McpServerCall<out R> : McpCall<R> {
     public companion object {
         public fun serializer(): SerializationStrategy<McpServerCall<*>> = McpServerCallSerializer
-        public fun deserializer(method: String): DeserializationStrategy<McpServerCall<*>> =
+        public fun deserializer(method: String): DeserializationStrategy<McpServerCall<*>>? =
             if (method.contains("notification")) McpServerNotification.deserializer(method)
             else McpServerRequest.deserializer(method)
     }
@@ -82,12 +82,12 @@ public sealed interface McpServerRequest<out R> : McpServerCall<R> {
 
     public companion object {
         public fun serializer(): SerializationStrategy<McpServerRequest<*>> = McpServerRequestSerializer
-        public fun deserializer(method: String): DeserializationStrategy<McpServerRequest<*>> =
+        public fun deserializer(method: String): DeserializationStrategy<McpServerRequest<*>>? =
             when (method) {
                 McpMethods.Roots.List -> McpRoot.ListRequest.serializer()
                 McpMethods.Sampling.CreateMessage -> McpSampling.CreateMessageRequest.serializer()
                 McpMethods.Ping -> McpUtilities.Ping.serializer()
-                else -> throw IllegalArgumentException("Unknown McpServerRequest method: $method")
+                else -> null
             }
     }
 }
@@ -95,7 +95,7 @@ public sealed interface McpServerRequest<out R> : McpServerCall<R> {
 @Serializable(with = McpServerNotificationSerializer::class)
 public sealed interface McpServerNotification : McpServerCall<Unit> {
     public companion object {
-        public fun deserializer(method: String): DeserializationStrategy<McpServerNotification> =
+        public fun deserializer(method: String): DeserializationStrategy<McpServerNotification>? =
             when (method) {
                 McpMethods.Notifications.Cancelled -> McpUtilities.Cancellation.serializer()
                 McpMethods.Notifications.Prompts.ListChanged -> McpPrompt.ListChangedNotification.serializer()
@@ -104,7 +104,7 @@ public sealed interface McpServerNotification : McpServerCall<Unit> {
                 McpMethods.Notifications.Message -> McpLogging.LogMessage.serializer()
                 McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
                 McpMethods.Notifications.Resources.Updated -> McpResource.UpdatedNotification.serializer()
-                else -> throw IllegalArgumentException("Unknown McpServerNotification method: $method")
+                else -> null
             }
     }
 }
