@@ -6,7 +6,6 @@ import io.genkt.jsonprc.client.interceptRequest
 import io.genkt.jsonprc.client.sendRequest
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
-import io.genkt.jsonrpc.server.intercept
 import io.github.genkt.jsonrpc.transport.memory.InMemoryTransport
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.test.runTest
@@ -25,17 +24,16 @@ class InterceptionTest {
         val client = JsonRpcClient(
             clientTransport.asJsonRpcClientTransport(),
         )
-        val server = JsonRpcServer(
-            serverTransport.asJsonRpcServerTransport(),
-            { request ->
+        val server = JsonRpcServer {
+            transport = serverTransport.asJsonRpcServerTransport()
+            onRequest = { request ->
                 JsonRpcSuccessResponse(
                     id = request.id,
                     result = JsonRpc.json.encodeToJsonElement(String.serializer(), "Hello"),
                 )
-            },
-            {}
-        ).intercept {
-            requestHandlerInterceptor += { oldHandler ->
+            }
+            onNotification = {}
+            requestInterceptor += { oldHandler ->
                 { request ->
                     JsonRpcSuccessResponse(
                         id = request.id,
