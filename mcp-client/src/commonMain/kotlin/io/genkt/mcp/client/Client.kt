@@ -15,7 +15,8 @@ public interface McpClient {
     public val onNotification: suspend (McpServerNotification) -> Unit
     public val transport: JsonRpcTransport
     public val requestIdGenerator: () -> RequestId
-    public val progressTokenGenerator: () -> String
+    public val progressTokenGenerator: () -> McpProgress.Token
+    public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
 
     @McpClientInterceptionApi
     public val jsonRpcServer: JsonRpcServer
