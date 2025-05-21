@@ -6,6 +6,9 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
+import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 public sealed interface McpUtilities {
     @Serializable
@@ -89,5 +92,22 @@ public sealed interface McpProgress {
         @Serializable
         @JvmInline
         public value class IntegerToken(public val value: Long) : Token
+    }
+
+    public companion object {
+        @OptIn(ExperimentalTime::class)
+        public val defaultTokenGenerator: () -> String = {
+            val timestamp = Clock.System.now().toEpochMilliseconds()
+
+            val random1 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
+            val random2 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
+            val random3 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
+            val random4 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
+            val random5 = Random.nextInt(0, 0xFFFF).toString(16).padStart(4, '0')
+
+            val timestampHex = timestamp.toString(16)
+
+            "prog-$timestampHex-$random1-$random2-$random3-$random4-$random5"
+        }
     }
 }
