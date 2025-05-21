@@ -9,13 +9,13 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 public interface JsonRpcClient : AutoCloseable {
     public val transport: JsonRpcClientTransport
-    public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
+    public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
     public val coroutineScope: CoroutineScope
     public suspend fun start()
     public suspend fun <R> execute(call: JsonRpcClientCall<R>): R
     public class Builder: GenericInterceptorScope {
         public var transport: JsonRpcClientTransport = Transport.ThrowingException { error("Using an uninitialized transport") }
-        public var errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
+        public var uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
         public var callInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = { it }
         public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
     }
