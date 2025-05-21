@@ -1,13 +1,9 @@
 package io.genkt.jsonrpc
 
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.JsonElement
 import kotlin.coroutines.*
 import kotlin.jvm.JvmName
@@ -22,19 +18,22 @@ public interface Transport<in Input, out Output> : AutoCloseable {
     public fun start()
 
     public companion object {
-        public val Disabled: Transport<Any?, Nothing> = object : Transport<Any?, Nothing> {
-            override val sendChannel: SendChannel<SendAction<Any?>>
-                get() = throw UnsupportedOperationException("Disabled transport")
-            override val receiveFlow: Flow<Result<Nothing>>
-                get() = throw UnsupportedOperationException("Disabled transport")
-            override val coroutineScope: CoroutineScope
-                get() = throw UnsupportedOperationException("Disabled transport")
-            override fun start() = Unit
+        public val Disabled: Transport<Any?, Nothing> =
+            ThrowingException { UnsupportedOperationException("This transport is disabled") }
 
-            override fun close() {
-                throw UnsupportedOperationException("Disabled transport")
+        @Suppress("FunctionName")
+        public fun ThrowingException(exception: () -> Throwable): Transport<Any?, Nothing> =
+            object : Transport<Any?, Nothing> {
+                override val sendChannel: SendChannel<SendAction<Any?>>
+                    get() = throw exception()
+                override val receiveFlow: Flow<Result<Nothing>>
+                    get() = throw exception()
+                override val coroutineScope: CoroutineScope
+                    get() = throw exception()
+
+                override fun start() = throw exception()
+                override fun close() = throw exception()
             }
-        }
     }
 }
 
