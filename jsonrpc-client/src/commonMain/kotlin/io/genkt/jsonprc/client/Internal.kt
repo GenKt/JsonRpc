@@ -75,4 +75,4 @@ private suspend fun JsonRpcClientImpl.resumeById(
 }
 
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
-    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
+    CoroutineScope(this.coroutineContext + coroutineContext + SupervisorJob(this.coroutineContext[Job]))
