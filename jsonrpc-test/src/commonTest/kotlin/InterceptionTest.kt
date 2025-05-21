@@ -1,7 +1,8 @@
 package io.github.genkt.jsonrpc.test
 
 import io.genkt.jsonprc.client.JsonRpcClient
-import io.genkt.jsonprc.client.intercept
+import io.genkt.jsonprc.client.interceptNotification
+import io.genkt.jsonprc.client.interceptRequest
 import io.genkt.jsonprc.client.sendRequest
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
@@ -59,23 +60,19 @@ class InterceptionTest {
     @Test
     fun `should intercept client correctly`() = runTest {
         val (clientTransport, serverTransport) = InMemoryTransport<JsonElement>()
-        val client = JsonRpcClient(
-            clientTransport.asJsonRpcClientTransport(),
-            {},
-            CoroutineName("Client")
-        ).intercept {
-            callInterceptor += { oldHandler ->
+        val client = JsonRpcClient {
+            transport = clientTransport.asJsonRpcClientTransport()
+            additionalCoroutineContext += CoroutineName("Client")
+            interceptRequest { handler ->
                 { request ->
-                    when(request) {
-                        is JsonRpcRequest ->
-                            JsonRpcSuccessResponse(
-                                id = request.id,
-                                result = JsonPrimitive("World"),
-                            )
-                        is JsonRpcNotification -> Unit
-                    }
+                    JsonRpcSuccessResponse(
+                        id = request.id,
+                        result = JsonPrimitive("World"),
+                    )
                 }
             }
+            @Suppress("RedundantUnitExpression")
+            interceptNotification { handler -> { Unit } }
         }
         val server = JsonRpcServer(
             serverTransport.asJsonRpcServerTransport(),

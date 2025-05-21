@@ -1,7 +1,7 @@
 package io.github.genkt.jsonrpc.test
 
 import io.genkt.jsonprc.client.JsonRpcClient
-import io.genkt.jsonprc.client.intercept
+import io.genkt.jsonprc.client.requestTimeOut
 import io.genkt.jsonprc.client.sendNotification
 import io.genkt.jsonprc.client.sendRequest
 import io.genkt.jsonrpc.*
@@ -43,10 +43,9 @@ suspend fun testJsonTransport(
         errorHandler = { serverErrorChannel.send(it) }
     )
     server.start()
-    val client = JsonRpcClient(
-        transport = clientTransport,
-    ).intercept {
-        callInterceptor = TimeOut(1.seconds)
+    val client = JsonRpcClient {
+        transport = clientTransport
+        requestTimeOut(1.seconds)
     }
     client.start()
     println("Client and Server started")
