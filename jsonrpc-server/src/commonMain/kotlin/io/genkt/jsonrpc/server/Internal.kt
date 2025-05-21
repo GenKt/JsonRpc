@@ -18,7 +18,7 @@ internal class JsonRpcServerImpl(
     override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(additionalCoroutineContext)
     override fun start() {
         transport.start()
-        coroutineScope.launch(start = CoroutineStart.LAZY) {
+        coroutineScope.launch {
             transport.receiveFlow.cancellable()
                 .collect { result ->
                     result.onSuccess {
