@@ -7,26 +7,18 @@ import kotlinx.serialization.json.JsonNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-public fun JsonRpcClient(
-    transport: JsonRpcClientTransport,
-    errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
-    coroutineContext: CoroutineContext = EmptyCoroutineContext,
-    buildInterceptor: (JsonRpcClientInterceptor.Builder.() -> Unit)? = null,
-): JsonRpcClient = JsonRpcClientImpl(
-    transport,
-    errorHandler,
-    coroutineContext
-).let {
-    if (buildInterceptor == null) it
-    else it.intercept(buildInterceptor)
-}
-
 public interface JsonRpcClient : AutoCloseable {
     public val transport: JsonRpcClientTransport
     public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
     public val coroutineScope: CoroutineScope
     public suspend fun start()
     public suspend fun <R> execute(call: JsonRpcClientCall<R>): R
+    public class Builder: GenericInterceptorScope {
+        public var transport: JsonRpcClientTransport = Transport.ThrowingException { error("Using an uninitialized transport") }
+        public var errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
+        public var callInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?> = { it }
+        public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
+    }
 }
 
 public suspend fun JsonRpcClient.sendRequest(
