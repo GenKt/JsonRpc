@@ -24,6 +24,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 
+// This constructor may be unsafe
 internal class McpClientImpl(
     override val info: McpInit.Implementation,
     override val capabilities: McpInit.ClientCapabilities,
