@@ -10,30 +10,28 @@ import kotlin.coroutines.cancellation.CancellationException
 
 internal class JsonRpcServerImpl(
     override val transport: JsonRpcServerTransport,
-    override val onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
-    override val onNotification: suspend (JsonRpcNotification) -> Unit,
-    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
-    coroutineContext: CoroutineContext = EmptyCoroutineContext,
+    val onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
+    val onNotification: suspend (JsonRpcNotification) -> Unit,
+    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : JsonRpcServer {
-    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(coroutineContext)
-    private val receiveJob = coroutineScope.launch(start = CoroutineStart.LAZY) {
-        transport.receiveFlow.cancellable()
-            .collect { result ->
-                result.onSuccess {
-                    handleMessageSafe(it)
-                }.onFailure {
-                    errorHandler(it)
-                }
-            }
-    }
-
+    override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(additionalCoroutineContext)
     override fun start() {
         transport.start()
-        receiveJob.start()
+        coroutineScope.launch(start = CoroutineStart.LAZY) {
+            transport.receiveFlow.cancellable()
+                .collect { result ->
+                    result.onSuccess {
+                        handleMessageSafe(it)
+                    }.onFailure {
+                        uncaughtErrorHandler(it)
+                    }
+                }
+        }
     }
 
     private fun CoroutineScope.handleMessageSafe(request: JsonRpcClientMessage) {
-        launch(receiveJob) {
+        launch {
             when (request) {
                 is JsonRpcRequest -> onRequestSafe(request)
                 is JsonRpcNotification -> onNotificationSafe(request)
@@ -48,7 +46,7 @@ internal class JsonRpcServerImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            launch { errorHandler(e) }
+            launch { uncaughtErrorHandler(e) }
         }
     }
 
@@ -58,7 +56,7 @@ internal class JsonRpcServerImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            launch { errorHandler(e) }
+            launch { uncaughtErrorHandler(e) }
             fallbackFailResponse(request, e)
         }
         launch { transport.sendChannel.sendOrThrow(response) }
@@ -66,24 +64,6 @@ internal class JsonRpcServerImpl(
 
     override fun close() {
         coroutineScope.cancel()
-        transport.close()
-    }
-}
-
-internal class InterceptedJsonRpcServer(
-    private val source: JsonRpcServer,
-    interceptor: JsonRpcServerInterceptor,
-) : JsonRpcServer by JsonRpcServerImpl(
-    transport = interceptor.interceptTransport(source.transport),
-    onRequest = interceptor.interceptRequestHandler(source.onRequest),
-    onNotification = interceptor.interceptNotificationHandler(source.onNotification),
-    errorHandler = interceptor.interceptErrorHandler(source.errorHandler),
-    coroutineContext = source.coroutineScope.coroutineContext + interceptor.additionalCoroutineContext,
-) {
-    override fun close() {
-        // TODO: check if this ordering is proper
-        coroutineScope.cancel()
-        source.close()
         transport.close()
     }
 }
@@ -101,4 +81,4 @@ private fun fallbackFailResponse(
 )
 
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
-    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
+    CoroutineScope(this.coroutineContext + coroutineContext + SupervisorJob(this.coroutineContext[Job]))

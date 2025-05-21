@@ -1,0 +1,49 @@
+package io.genkt.jsonrpc.server
+
+import io.genkt.jsonrpc.JsonRpcNotification
+import io.genkt.jsonrpc.JsonRpcRequest
+import io.genkt.jsonrpc.plus
+import io.genkt.jsonrpc.JsonRpcServerMessage
+import io.genkt.jsonrpc.JsonRpcServerTransport
+import io.genkt.jsonrpc.TimeOut
+import kotlinx.coroutines.CoroutineScope
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.time.Duration
+
+public fun JsonRpcServer(
+    transport: JsonRpcServerTransport,
+    onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
+    onNotification: suspend (JsonRpcNotification) -> Unit,
+    errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
+): JsonRpcServer = JsonRpcServerImpl(
+    transport,
+    onRequest,
+    onNotification,
+    errorHandler,
+    additionalCoroutineContext
+)
+
+@OptIn(ExperimentalContracts::class)
+public fun JsonRpcServer(buildAction: JsonRpcServer.Builder.() -> Unit): JsonRpcServer {
+    contract {
+        callsInPlace(buildAction, kotlin.contracts.InvocationKind.EXACTLY_ONCE)
+    }
+    return JsonRpcServer.Builder().apply(buildAction).build()
+}
+
+public fun JsonRpcServer.Builder.build(): JsonRpcServer =
+    JsonRpcServer(
+        transport = transport,
+        onRequest = requestInterceptor(onRequest),
+        onNotification = notificationInterceptor(onNotification),
+        errorHandler = uncaughtErrorHandler,
+        additionalCoroutineContext = additionalCoroutineContext
+    )
+
+public fun JsonRpcServer.Builder.requestTimeout(timeout: Duration) {
+    requestInterceptor += TimeOut(timeout)
+}
