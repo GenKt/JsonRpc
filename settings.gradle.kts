@@ -5,7 +5,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GenKt"
+rootProject.name = "mcp-sdk"
 
 fun genKtModules(vararg modules: String) {
     for (module in modules) {
@@ -15,7 +15,6 @@ fun genKtModules(vararg modules: String) {
 }
 
 genKtModules(
-    "generate-core",
     "serialization-json",
     "jsonrpc-common",
     "jsonrpc-client",
@@ -23,15 +22,8 @@ genKtModules(
     "jsonrpc-test",
     "jsonrpc-transport-stdio",
     "jsonrpc-transport-memory",
-    "logging-api",
-    "logging-transport-file",
-    "logging-transport-console",
     "mcp-common",
     "mcp-server",
     "mcp-client",
-    "mcp-sdk-common",
-    "mcp-sdk-server",
-    "mcp-sdk-client",
-    "mcp-sdk-test"
 )
 
