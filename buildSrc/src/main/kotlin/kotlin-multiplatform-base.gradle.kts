@@ -11,9 +11,4 @@ kotlin {
     explicitApi()
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     applyDefaultHierarchyTemplate {}
-    sourceSets.all {
-        languageSettings {
-            enableLanguageFeature("ContextParameters")
-        }
-    }
 }
