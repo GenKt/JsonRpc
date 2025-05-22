@@ -12,14 +12,14 @@ public typealias Interceptor<T> = (T) -> T
 
 /**
  * Combines two interceptors into a single interceptor.
- * The resulting interceptor applies the [other] interceptor first, then applies this interceptor to the result.
- * @param other The interceptor to apply first.
+ * The resulting interceptor applies the `this` interceptor first, then applies [other] interceptor to the result.
+ * @param other The interceptor to apply after `this`.
  * @return A new interceptor that applies both interceptors in sequence.
  */
 public inline operator fun <T> Interceptor<T>.plus(
     crossinline other: Interceptor<T>,
 ): Interceptor<T> = { t ->
-    this(other(t))
+   other(this(t))
 }
 
 /**
