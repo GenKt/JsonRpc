@@ -19,12 +19,11 @@ public interface Transport<in Input, out Output> : AutoCloseable {
     public val sendChannel: SendChannel<SendAction<Input>>
     /** The flow for receiving messages. */
     public val receiveFlow: Flow<Result<Output>>
-    /** The [CoroutineScope] associated with this transport. */
+    /** The [CoroutineScope] associated with this transport's forwarding work. */
     public val coroutineScope: CoroutineScope
     /** Starts the transport, allowing it to send and receive messages. */
     public fun start()
 
-    /** Companion object for [Transport]. */
     public companion object {
         /** A disabled transport that throws [UnsupportedOperationException] for all operations. */
         public val Disabled: Transport<Any?, Nothing> =
@@ -154,14 +153,11 @@ public suspend fun <T> SendChannel<SendAction<T>>.sendOrThrow(
 
 /**
  * Creates a [Transport] instance.
- * @param Input The type of messages that can be sent.
- * @param Output The type of messages that can be received.
  * @param sendChannel The channel for sending messages.
  * @param receiveFlow The flow for receiving messages.
  * @param coroutineScope The [CoroutineScope] for the transport.
  * @param onClose A lambda to be called when the transport is closed.
  * @param onStart A lambda to be called when the transport is started.
- * @return A new [Transport] instance.
  */
 public fun <Input, Output> Transport(
     sendChannel: SendChannel<SendAction<Input>>,
@@ -180,14 +176,11 @@ public fun <Input, Output> Transport(
 
 /**
  * Creates a [SharedTransport] instance.
- * @param Input The type of messages that can be sent.
- * @param Output The type of messages that can be received.
  * @param sendChannel The channel for sending messages.
  * @param receiveFlow The shared flow for receiving messages.
  * @param coroutineScope The [CoroutineScope] for the transport.
  * @param onClose A lambda to be called when the transport is closed.
  * @param onStart A lambda to be called when the transport is started.
- * @return A new [SharedTransport] instance.
  */
 public fun <Input, Output> SharedTransport(
     sendChannel: SendChannel<SendAction<Input>>,
@@ -205,11 +198,10 @@ public fun <Input, Output> SharedTransport(
     )
 
 /**
- * Converts a [Transport] to a [SharedTransport] by sharing its [receiveFlow].
+ * Converts a [Transport] to a [SharedTransport] by sharing its [Transport.receiveFlow].
  * @param coroutineContext Additional [CoroutineContext] elements to combine with the transport's [coroutineScope].
  * @param started The [SharingStarted] strategy for the shared flow.
- * @param replay The number of items to replay to new collectors.
- * @return A new [SharedTransport] instance.
+ * @param replay the number of values replayed to new subscribers (cannot be negative, defaults to zero).
  */
 public fun <Input, Output> Transport<Input, Output>.sharedIn(
     coroutineContext: CoroutineContext = EmptyCoroutineContext,
@@ -227,7 +219,6 @@ public fun <Input, Output> Transport<Input, Output>.sharedIn(
 /**
  * Creates a new [SendChannel] that delegates to this channel, transforming input values using the provided function.
  * @param transform The function to transform input values.
- * @return A new [SendChannel] that transforms input values.
  */
 public fun <T, R> SendChannel<R>.delegateInput(transform: (T) -> R): SendChannel<T> =
     DelegatingSendChannel(
@@ -319,7 +310,6 @@ public typealias JsonRpcServerTransport = Transport<JsonRpcServerMessage, JsonRp
 /**
  * Converts a [JsonTransport] to a [JsonRpcClientTransport].
  * Messages sent are encoded as [JsonRpcClientMessage] and received messages are decoded as [JsonRpcServerMessage].
- * @return A [JsonRpcClientTransport] instance.
  */
 public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
     Transport(
@@ -340,7 +330,6 @@ public fun JsonTransport.asJsonRpcClientTransport(): JsonRpcClientTransport =
 /**
  * Converts a [JsonTransport] to a [JsonRpcServerTransport].
  * Messages sent are encoded as [JsonRpcServerMessage] and received messages are decoded as [JsonRpcClientMessage].
- * @return A [JsonRpcServerTransport] instance.
  */
 public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
     Transport(
@@ -361,7 +350,6 @@ public fun JsonTransport.asJsonRpcServerTransport(): JsonRpcServerTransport =
 /**
  * Converts a [JsonTransport] to a [JsonRpcTransport].
  * Messages sent and received are encoded/decoded as [JsonRpcMessage].
- * @return A [JsonRpcTransport] instance.
  */
 public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
     Transport(
@@ -379,7 +367,6 @@ public fun JsonTransport.asJsonRpcTransport(): JsonRpcTransport =
 /**
  * Converts a [JsonRpcTransport] to a [JsonRpcClientTransport].
  * This is primarily a type-casting operation, ensuring that the receive flow only emits [JsonRpcServerMessage].
- * @return A [JsonRpcClientTransport] instance.
  */
 public fun JsonRpcTransport.asJsonClientTransport(): JsonRpcClientTransport =
     Transport(
@@ -407,7 +394,7 @@ public fun JsonRpcTransport.asJsonServerTransport(): JsonRpcServerTransport =
 /**
  * Converts a [StringTransport] to a [JsonTransport].
  * Sent [JsonElement] messages are encoded to strings, and received strings are parsed as [JsonElement].
- * @param parse An interceptor for the receive flow of strings.
+ * @param parse An interceptor for the receive flow of strings. Parsing it into whole JSONs.
  * @param write An interceptor for the send flow of strings.
  * @return A [JsonTransport] instance.
  */

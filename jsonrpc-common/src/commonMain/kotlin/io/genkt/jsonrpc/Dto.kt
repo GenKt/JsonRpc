@@ -69,7 +69,7 @@ public value class JsonRpcClientMessageBatch(
 ) : JsonRpcClientMessage
 
 /**
- * Represents a JSON-RPC client call.
+ * Represents a JSON-RPC client call. For the `execute`-`call` pattern.
  * @param R The type of the expected response.
  */
 public sealed interface JsonRpcClientCall<R>
