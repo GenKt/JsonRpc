@@ -96,43 +96,43 @@ public inline fun <T, R> GenericInterceptorScope.OnInvoke(
  * @property send The interceptor for the send flow.
  * @property receive The interceptor for the receive flow.
  */
-public class TransportInterceptor<Input, Output>(
+@Suppress("FunctionName")
+public fun <Input, Output> TransportInterceptor(
     send: Interceptor<Flow<SendAction<Input>>>,
     receive: Interceptor<Flow<Result<Output>>>,
-) : Interceptor<Transport<Input, Output>> by { transport ->
+) : Interceptor<Transport<Input, Output>> = { transport ->
     Transport(
         sendChannel = transport.sendChannel.forwarded(transport.coroutineScope, send),
         receiveFlow = receive(transport.receiveFlow),
         coroutineScope = transport.coroutineScope,
         onClose = transport::close,
     )
-} {
-    /**
-     * A builder for creating [TransportInterceptor] instances.
-     * @param Input The type of the input messages for the transport.
-     * @param Output The type of the output messages for the transport.
-     */
-    public class Builder<Input, Output> : GenericInterceptorScope {
-        /** The interceptor for the send flow. */
-        public var sendChannelInterceptor: Interceptor<Flow<SendAction<Input>>> = { it }
-        /** The interceptor for the receive flow. */
-        public var receiveFlowInterceptor: Interceptor<Flow<Result<Output>>> = { it }
-    }
-
-    public companion object {
-        /**
-         * Creates a [TransportInterceptor] using the builder pattern.
-         * @param buildAction A lambda function to configure the builder.
-         */
-        public operator fun <Input, Output> invoke(buildAction: Builder<Input, Output>.() -> Unit): TransportInterceptor<Input, Output> =
-            Builder<Input, Output>().apply(buildAction).build()
-    }
 }
 
 /**
- * Builds a [TransportInterceptor] from a [TransportInterceptor.Builder].
+ * Creates a [TransportInterceptor] using the builder pattern.
+ * @param buildAction A lambda function to configure the builder.
  */
-public fun <Input, Output> TransportInterceptor.Builder<Input, Output>.build(): TransportInterceptor<Input, Output> =
+@Suppress("FunctionName")
+public fun <Input, Output> TransportInterceptor(buildAction: TransportInterceptorBuilder<Input, Output>.() -> Unit): Interceptor<Transport<Input, Output>> =
+    TransportInterceptorBuilder<Input, Output>().apply(buildAction).build()
+
+/**
+ * A builder for creating [TransportInterceptor] instances.
+ * @param Input The type of the input messages for the transport.
+ * @param Output The type of the output messages for the transport.
+ */
+public class TransportInterceptorBuilder<Input, Output> : GenericInterceptorScope {
+    /** The interceptor for the send flow. */
+    public var sendChannelInterceptor: Interceptor<Flow<SendAction<Input>>> = { it }
+    /** The interceptor for the receive flow. */
+    public var receiveFlowInterceptor: Interceptor<Flow<Result<Output>>> = { it }
+}
+
+/**
+ * Builds a [TransportInterceptor] from a [TransportInterceptorBuilder].
+ */
+public fun <Input, Output> TransportInterceptorBuilder<Input, Output>.build(): Interceptor<Transport<Input, Output>> =
     TransportInterceptor(
         send = sendChannelInterceptor,
         receive = receiveFlowInterceptor,
@@ -149,10 +149,10 @@ public fun <Input, Output> Transport<Input, Output>.interceptWith(
 
 /**
  * Applies a [TransportInterceptor] to a [Transport] using the builder pattern.
- * @param buildAction A lambda function to configure the [TransportInterceptor.Builder].
+ * @param buildAction A lambda function to configure the [TransportInterceptorBuilder].
  * @return The intercepted [Transport].
  */
 public fun <Input, Output> Transport<Input, Output>.intercept(
-    buildAction: TransportInterceptor.Builder<Input, Output>.() -> Unit
+    buildAction: TransportInterceptorBuilder<Input, Output>.() -> Unit
 ): Transport<Input, Output> =
     interceptWith(TransportInterceptor(buildAction))
