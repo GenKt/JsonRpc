@@ -9,42 +9,47 @@ import kotlin.coroutines.EmptyCoroutineContext
  * Represents a JSON-RPC server capable of receiving requests and notifications from clients.
  * It handles the underlying transport, message deserialization/serialization, and dispatches
  * calls to appropriate handlers.
- * The server must be started using the [start] method to begin processing messages.
+ *
+ * The server must be started using the [start] method to begin listening on the [transport].
  * It is [AutoCloseable] and should be closed when no longer needed to release resources.
+ * Otherwise, the [coroutineScope] leaks.
  */
 public interface JsonRpcServer : AutoCloseable {
-    /** The [JsonRpcServerTransport] used by this server for communication. */
+    /**
+     * The [JsonRpcServerTransport] used by this server for communication.
+     */
     public val transport: JsonRpcServerTransport
     /**
-     * A handler for uncaught exceptions that occur within the server's [coroutineScope]
-     * or during request/notification processing if not handled by specific interceptors.
-     * Defaults to an empty handler.
+     * A handler for uncaught exceptions which are not handled by request/notification handlers.
      */
     public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
-    /** The [CoroutineScope] used by this server for its operations, including message handling. */
+    /**
+     * The [CoroutineScope] used by this server for all its operations.
+     * Closing it won't close the underlying [transport].
+     */
     public val coroutineScope: CoroutineScope
 
     /**
-     * Starts the server, initializing the transport and beginning to listen for incoming client messages.
-     * This method must be called before the server can process any requests or notifications.
+     * Starts the transport and the server, begin to listen for incoming client messages.
      */
     public fun start()
 
     /**
-     * A builder class for configuring and creating [JsonRpcServer] instances.
-     * Provides a DSL for setting up the transport, request/notification handlers,
-     * error handlers, interceptors, and coroutine context.
+     * A builder class for configuring [JsonRpcServer].
+     *
+     * The receiver for the DSL.
      */
     public class Builder : GenericInterceptorScope {
         /**
-         * The [JsonRpcServerTransport] to be used by the server.
-         * Defaults to a transport that throws an error if not initialized.
+         * Will be [JsonRpcServer.transport].
+         *
+         * Defaults to transport that throws an error if not initialized.
          * This **must** be set for the server to function.
          */
         public var transport: JsonRpcServerTransport =
             Transport.ThrowingException { error("Using an uninitialized transport") }
         /**
-         * A handler for uncaught exceptions that occur within the server's coroutine scope.
+         * A handler for uncaught exceptions which are not handled by request/notification handlers.
          * Defaults to an empty handler.
          */
         public var uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
@@ -54,17 +59,14 @@ public interface JsonRpcServer : AutoCloseable {
          */
         public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
         /**
-         * The primary handler for incoming [JsonRpcRequest] messages.
-         * This suspend function takes a [JsonRpcRequest] and is expected to return a [JsonRpcServerSingleMessage]
-         * (either [JsonRpcSuccessResponse] or [JsonRpcFailResponse]).
+         * Handle incoming [JsonRpcRequest] messages and return [JsonRpcServerMessage] response.
          * Defaults to a handler that throws [NotImplementedError]. This **must** be set for request handling.
          */
         public var onRequest: suspend (JsonRpcRequest) -> JsonRpcServerSingleMessage = {
             throw NotImplementedError("Server feature not implemented.")
         }
         /**
-         * The primary handler for incoming [JsonRpcNotification] messages.
-         * This suspend function takes a [JsonRpcNotification]. Notifications do not send responses.
+         * Handle incoming [JsonRpcNotification] messages.
          * Defaults to a handler that throws [NotImplementedError]. This **must** be set if notifications are expected.
          */
         public var onNotification: suspend (JsonRpcNotification) -> Unit = {
@@ -72,13 +74,11 @@ public interface JsonRpcServer : AutoCloseable {
         }
         /**
          * An [Interceptor] for modifying the behavior of the [onRequest] handler.
-         * Allows pre-processing of requests or post-processing of responses.
          * Defaults to an identity interceptor (no modification).
          */
         public var requestInterceptor: Interceptor<suspend (JsonRpcRequest) -> JsonRpcServerSingleMessage> = { it }
         /**
-         * An [Interceptor] for modifying the behavior of the [onNotification] handler.
-         * Allows pre-processing of notifications.
+         * An [Interceptor] for modifying the behavior of the [onNotification] handler
          * Defaults to an identity interceptor (no modification).
          */
         public var notificationInterceptor: Interceptor<suspend (JsonRpcNotification) -> Unit> = { it }
