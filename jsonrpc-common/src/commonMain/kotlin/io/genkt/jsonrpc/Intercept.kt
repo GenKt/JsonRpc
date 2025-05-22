@@ -44,7 +44,7 @@ public fun <T, R> GenericInterceptorScope.TimeOut(duration: Duration): Intercept
  */
 @Suppress("FunctionName")
 public inline fun <T, R, reified E : Throwable> GenericInterceptorScope.Catch(
-    crossinline handleException: suspend (E) -> R
+    crossinline handleException: suspend (T, E) -> R
 ): Interceptor<suspend (T) -> R> =
     { f ->
         { param ->
@@ -52,7 +52,7 @@ public inline fun <T, R, reified E : Throwable> GenericInterceptorScope.Catch(
                 f(param)
             } catch (e: Throwable) {
                 if (e !is E) throw e
-                handleException(e)
+                handleException(param, e)
             }
         }
     }
