@@ -444,4 +444,4 @@ public fun JsonRpcTransport.shareAsClientAndServerIn(
 }
 
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
-    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
+    CoroutineScope(this.coroutineContext + coroutineContext + SupervisorJob(this.coroutineContext[Job]))
