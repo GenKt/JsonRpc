@@ -18,10 +18,8 @@ public interface McpClient {
     public val progressTokenGenerator: () -> McpProgress.Token
     public val errorHandler: suspend CoroutineScope.(Throwable) -> Unit
 
-    @McpClientInterceptionApi
     public val jsonRpcServer: JsonRpcServer
 
-    @McpClientInterceptionApi
     public val jsonRpcClient: JsonRpcClient
 
     public val coroutineScope: CoroutineScope

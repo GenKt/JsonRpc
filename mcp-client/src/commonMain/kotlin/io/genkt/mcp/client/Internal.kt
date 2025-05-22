@@ -209,12 +209,5 @@ internal class McpClientImpl(
     }
 }
 
-internal class InterceptedMcpClient(
-    private val delegate: McpClient,
-    private val interceptor: Interceptor<McpClient>,
-) : McpClient {
-    // TODO
-}
-
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
     CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
