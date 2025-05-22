@@ -6,7 +6,7 @@ import io.genkt.jsonrpc.JsonRpcServerSingleMessage
 import kotlin.time.Duration
 
 /**
- * Exception thrown when the JSON-RPC server responds with an error.
+ * Exception thrown when the JSON-RPC server responds with [JsonRpcFailResponse].
  *
  * @property error The [JsonRpcFailResponse.Error] object received from the server.
  */

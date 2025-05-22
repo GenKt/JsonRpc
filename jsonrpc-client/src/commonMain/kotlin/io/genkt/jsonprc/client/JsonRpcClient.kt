@@ -12,49 +12,52 @@ import kotlin.coroutines.EmptyCoroutineContext
  * It handles the underlying transport and message serialization/deserialization.
  * The client must be started using the [start] method before sending messages.
  * It is [AutoCloseable] and should be closed when no longer needed to release resources.
+ * Otherwise, the [coroutineScope] leaks.
  */
 public interface JsonRpcClient : AutoCloseable {
-    /** The [JsonRpcClientTransport] used by this client for communication. */
+    /**
+     * The [JsonRpcClientTransport] used by this client for communication.
+     */
     public val transport: JsonRpcClientTransport
     /**
-     * A handler for uncaught exceptions that occur within the client's [coroutineScope].
-     * Defaults to an empty handler.
+     * A handler for uncaught exceptions which are not handled by [execute] calls.
      */
     public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
-    /** The [CoroutineScope] used by this client for its operations. */
+    /**
+     * The [CoroutineScope] used by this client for its operations.
+     */
     public val coroutineScope: CoroutineScope
 
     /**
-     * Starts the client, initializing the transport and beginning to listen for incoming messages.
+     * Starts the client, start the transport, begin to listen for incoming messages.
      * This method must be called before any requests or notifications can be sent.
+     * Otherwise, [execute] blocks.
      */
     public suspend fun start()
 
     /**
      * Executes a JSON-RPC client call.
-     * This is a generic method used internally to handle both requests and notifications.
+     * This is a generic method to handle both requests and notifications.
      *
      * @param R The expected result type for the call.
      * @param call The [JsonRpcClientCall] to execute (either a [JsonRpcRequest] or [JsonRpcNotification]).
      * @return The result of the call. For [JsonRpcRequest], it's the corresponding [JsonRpcSuccessResponse]. For [JsonRpcNotification], it's [Unit].
-     * @throws JsonRpcResponseException if the server returns an error response for a request.
-     * @throws JsonRpcRequestIdNotFoundException if a response is received for an unknown request ID.
-     * @throws kotlinx.coroutines.TimeoutCancellationException if a timeout occurs (e.g., configured via interceptors).
      */
     public suspend fun <R> execute(call: JsonRpcClientCall<R>): R
 
     /**
-     * A builder class for configuring and creating [JsonRpcClient] instances.
-     * Provides a DSL for setting up the transport, error handlers, interceptors, and coroutine context.
+     * A builder class for configuring [JsonRpcClient].
+     *
+     * The receiver for the DSL.
      */
     public class Builder: GenericInterceptorScope {
         /**
          * The [JsonRpcClientTransport] to be used by the client.
-         * Defaults to a transport that throws an error if not initialized.
+         * Defaults to transport that throws an error if not initialized.
          */
         public var transport: JsonRpcClientTransport = Transport.ThrowingException { error("Using an uninitialized transport") }
         /**
-         * A handler for uncaught exceptions that occur within the client's coroutine scope.
+         * A handler for uncaught exceptions which are not handled by [execute] calls.
          * Defaults to an empty handler.
          */
         public var uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}

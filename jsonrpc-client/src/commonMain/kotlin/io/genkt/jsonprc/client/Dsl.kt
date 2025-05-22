@@ -9,13 +9,10 @@ import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration
 
 /**
- * Creates a [JsonRpcClient] with the specified transport, error handler, call interceptor, and coroutine context.
- *
  * @param transport The [JsonRpcClientTransport] to use for communication.
- * @param uncaughtErrorHandler A lambda function to handle uncaught errors from the client's coroutine scope.
+ * @param uncaughtErrorHandler A handler for uncaught exceptions which are not handled by [JsonRpcClient.execute] calls.
  * @param callInterceptor An [Interceptor] to modify the behavior of client calls.
  * @param additionalCoroutineContext Additional [CoroutineContext] elements to combine with the client's scope.
- * @return A new [JsonRpcClient] instance.
  */
 public fun JsonRpcClient(
     transport: JsonRpcClientTransport,
@@ -30,10 +27,7 @@ public fun JsonRpcClient(
 )
 
 /**
- * Creates a [JsonRpcClient] using the DSL builder pattern.
- *
- * @param buildAction A lambda function to configure the [JsonRpcClient.Builder].
- * @return A new [JsonRpcClient] instance.
+ * @param buildAction Configure the [JsonRpcClient.Builder].
  */
 @OptIn(ExperimentalContracts::class)
 public inline fun JsonRpcClient(buildAction: JsonRpcClient.Builder.() -> Unit): JsonRpcClient {
@@ -45,9 +39,6 @@ public inline fun JsonRpcClient(buildAction: JsonRpcClient.Builder.() -> Unit): 
 
 /**
  * Builds a [JsonRpcClient] from the current [JsonRpcClient.Builder] configuration.
- *
- * @receiver The [JsonRpcClient.Builder] instance.
- * @return A new [JsonRpcClient] instance.
  */
 public fun JsonRpcClient.Builder.build(): JsonRpcClient = JsonRpcClient(
     transport = transport,
@@ -59,7 +50,6 @@ public fun JsonRpcClient.Builder.build(): JsonRpcClient = JsonRpcClient(
 /**
  * Adds an interceptor for [JsonRpcRequest] calls to the [JsonRpcClient.Builder].
  *
- * @receiver The [JsonRpcClient.Builder] instance.
  * @param intercept The [Interceptor] for [JsonRpcRequest] calls.
  */
 @Suppress("unchecked_cast")
@@ -78,7 +68,6 @@ public fun JsonRpcClient.Builder.interceptRequest(intercept: Interceptor<suspend
 /**
  * Adds an interceptor for [JsonRpcNotification] calls to the [JsonRpcClient.Builder].
  *
- * @receiver The [JsonRpcClient.Builder] instance.
  * @param intercept The [Interceptor] for [JsonRpcNotification] calls.
  */
 @Suppress("unchecked_cast")
@@ -96,9 +85,8 @@ public fun JsonRpcClient.Builder.interceptNotification(intercept: Interceptor<su
 
 /**
  * Adds a request timeout interceptor to the [JsonRpcClient.Builder].
- * This will apply a timeout to all [JsonRpcRequest] calls made by the client.
+ * This will apply a [TimeOut] to all [JsonRpcRequest] calls made by the client.
  *
- * @receiver The [JsonRpcClient.Builder] instance.
  * @param timeOut The [Duration] for the timeout.
  */
 public fun JsonRpcClient.Builder.requestTimeOut(timeOut: Duration) {
