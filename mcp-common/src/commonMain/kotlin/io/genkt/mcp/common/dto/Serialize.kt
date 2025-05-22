@@ -9,15 +9,7 @@ import kotlinx.serialization.descriptors.SerialKind
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonEncoder
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.json.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -37,8 +29,8 @@ internal object McpClientCallSerializer
             is McpClientNotification -> McpClientNotification.serializer()
             is McpClientRequest<*> -> McpClientRequest.serializer()
             is McpProgress.RawClientRequest<*, *> -> McpProgress.RawClientRequest.serializer(
-                McpClientRequest.serializer(),
-                Unit.serializer() // Actually unused
+                Unit.serializer(), // Actually unused
+                McpClientRequest.serializer(Unit.serializer()),
             )
 
             is McpProgress.ClientRequest<*, *> -> errorShouldSerializeRawRequest(
@@ -59,8 +51,8 @@ internal object McpServerCallSerializer
         McpServerNotification.serializer(),
         McpServerRequestSerializer,
         McpProgress.RawServerRequest.serializer(
+            Unit.serializer(), // Actually unused
             McpServerRequestSerializer,
-            Unit.serializer() // Actually unused
         )
     ),
     selectSerializer = { serverCall ->
@@ -68,8 +60,8 @@ internal object McpServerCallSerializer
             is McpServerNotification -> McpServerNotification.serializer()
             is McpServerRequest<*> -> McpServerRequest.serializer()
             is McpProgress.RawServerRequest<*, *> -> McpProgress.RawServerRequest.serializer(
-                McpServerRequest.serializer(),
-                Unit.serializer() // Actually unused
+                Unit.serializer(), // Actually unused
+                McpServerRequest.serializer(Unit.serializer()),
             )
 
             is McpProgress.ServerRequest<*, *> -> errorShouldSerializeRawRequest(
