@@ -13,6 +13,16 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration
 
+/**
+ * Creates a [JsonRpcServer] with the specified transport, request handler, notification handler, error handler, and coroutine context.
+ *
+ * @param transport The [JsonRpcServerTransport] to use for communication.
+ * @param onRequest A suspend function to handle incoming [JsonRpcRequest] messages and return a [JsonRpcServerMessage] response.
+ * @param onNotification A suspend function to handle incoming [JsonRpcNotification] messages.
+ * @param errorHandler A suspend function to handle uncaught errors from the server's coroutine scope. Defaults to an empty handler.
+ * @param additionalCoroutineContext Additional [CoroutineContext] elements to combine with the server's scope. Defaults to [EmptyCoroutineContext].
+ * @return A new [JsonRpcServer] instance.
+ */
 public fun JsonRpcServer(
     transport: JsonRpcServerTransport,
     onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
@@ -27,6 +37,12 @@ public fun JsonRpcServer(
     additionalCoroutineContext
 )
 
+/**
+ * Creates a [JsonRpcServer] using the DSL builder pattern.
+ *
+ * @param buildAction A lambda function to configure the [JsonRpcServer.Builder].
+ * @return A new [JsonRpcServer] instance.
+ */
 @OptIn(ExperimentalContracts::class)
 public fun JsonRpcServer(buildAction: JsonRpcServer.Builder.() -> Unit): JsonRpcServer {
     contract {
@@ -35,6 +51,13 @@ public fun JsonRpcServer(buildAction: JsonRpcServer.Builder.() -> Unit): JsonRpc
     return JsonRpcServer.Builder().apply(buildAction).build()
 }
 
+/**
+ * Builds a [JsonRpcServer] from the current [JsonRpcServer.Builder] configuration.
+ * This applies any configured interceptors to the request and notification handlers.
+ *
+ * @receiver The [JsonRpcServer.Builder] instance.
+ * @return A new [JsonRpcServer] instance.
+ */
 public fun JsonRpcServer.Builder.build(): JsonRpcServer =
     JsonRpcServer(
         transport = transport,
@@ -44,6 +67,13 @@ public fun JsonRpcServer.Builder.build(): JsonRpcServer =
         additionalCoroutineContext = additionalCoroutineContext
     )
 
+/**
+ * Adds a request timeout interceptor to the [JsonRpcServer.Builder].
+ * This will apply a timeout to the processing of all incoming [JsonRpcRequest]s.
+ *
+ * @receiver The [JsonRpcServer.Builder] instance.
+ * @param timeout The [Duration] for the timeout.
+ */
 public fun JsonRpcServer.Builder.requestTimeout(timeout: Duration) {
     requestInterceptor += TimeOut(timeout)
 }
