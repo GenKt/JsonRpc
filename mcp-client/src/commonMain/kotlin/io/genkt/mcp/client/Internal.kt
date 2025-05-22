@@ -1,5 +1,3 @@
-@file:OptIn(McpClientInterceptionApi::class)
-
 package io.genkt.mcp.client
 
 import io.genkt.jsonprc.client.JsonRpcClient
