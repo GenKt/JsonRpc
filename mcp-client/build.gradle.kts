@@ -7,9 +7,9 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(project(":genkt-mcp-common"))
-                implementation(project(":genkt-jsonrpc-client"))
-                implementation(project(":genkt-jsonrpc-server"))
+                api(project(":mcp-common"))
+                implementation(project(":jsonrpc-client"))
+                implementation(project(":jsonrpc-server"))
             }
         }
     }

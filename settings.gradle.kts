@@ -7,14 +7,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "mcp-sdk"
 
-fun genKtModules(vararg modules: String) {
-    for (module in modules) {
-        include(":genkt-$module")
-        project(":genkt-$module").projectDir = file(module)
-    }
-}
-
-genKtModules(
+include(
     "serialization-json",
     "jsonrpc-common",
     "jsonrpc-client",

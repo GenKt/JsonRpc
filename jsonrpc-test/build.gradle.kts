@@ -8,10 +8,10 @@ kotlin {
     sourceSets {
         all {
             dependencies {
-                implementation(project(":genkt-jsonrpc-client"))
-                implementation(project(":genkt-jsonrpc-server"))
-                implementation(project(":genkt-jsonrpc-transport-memory"))
-                implementation(project(":genkt-jsonrpc-transport-stdio"))
+                implementation(project(":jsonrpc-client"))
+                implementation(project(":jsonrpc-server"))
+                implementation(project(":jsonrpc-transport-memory"))
+                implementation(project(":jsonrpc-transport-stdio"))
                 implementation(libs.kotlin.coroutines.test)
                 implementation(libs.kotlin.test)
             }

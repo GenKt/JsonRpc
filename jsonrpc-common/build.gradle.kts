@@ -10,7 +10,7 @@ kotlin {
                 api(libs.kotlinx.coroutine.core)
                 api(libs.kotlinx.serialization.json)
                 api(libs.kotlinx.io.core)
-                api(project(":genkt-serialization-json"))
+                api(project(":serialization-json"))
                 implementation(libs.streamlin)
             }
         }
