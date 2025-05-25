@@ -14,6 +14,12 @@ public data class McpClientRequest<Result, Request : McpClientBasicRequest<Resul
 ) : McpClientCall<Result> by basicRequest {
     @Serializable
     public data class Meta(
+        /**
+         * A non-null value of this property means that the request sender is interested in receiving progress updates.
+         * The party who receives this channel should update the progress by sending [McpProgress] instances to the channel.
+         *
+         * This channel will be closed when the request is completed, for both parties.
+         */
         val progressChannel: SendChannel<McpProgress>? = null,
     )
 }
