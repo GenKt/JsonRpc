@@ -2,15 +2,17 @@ package io.genkt.mcp.common
 
 import io.genkt.jsonrpc.JsonRpcClientSingleMessage
 import io.genkt.jsonrpc.JsonRpcFailResponse
+import io.genkt.mcp.common.dto.McpServerRawNotification
 
+@Suppress("CanBeParameter")
 public class McpMethodNotFoundException(
-    public val originalCall: JsonRpcClientSingleMessage
-) : RuntimeException("Method ${originalCall.method} not found in: $originalCall")
+    public val jsonRpcMessage: JsonRpcClientSingleMessage
+) : RuntimeException("Method ${jsonRpcMessage.method} not found in: $jsonRpcMessage")
 
 public class McpParamParseException(
-    public val originalCall: JsonRpcClientSingleMessage,
-    public override val message: String,
-) : RuntimeException("Fail to parse JsonRpc param: $message in: $originalCall")
+    public val jsonRpcMessage: JsonRpcClientSingleMessage,
+    cause: Throwable
+) : RuntimeException(cause)
 
 /**
  * This exception can be thrown when the client or server want to response with [JsonRpcFailResponse].
@@ -21,4 +23,10 @@ public class McpParamParseException(
  */
 public class McpErrorResponseException(
     public val error: JsonRpcFailResponse.Error,
-): RuntimeException("Get response with error:(${error.code}) ${error.message}")
+) : RuntimeException("Get response with error:(${error.code}) ${error.message}")
+
+public class McpServerNotificationException(
+    public val notification: McpServerRawNotification,
+    message: String? = null,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
