@@ -40,13 +40,15 @@ public sealed interface McpInit {
     @Serializable
     public data class ClientCapabilities(
         public val experimental: JsonObject? = null,
-        public val sampling: JsonObject? = null,
+        public val sampling: Sampling? = null,
         public val roots: RootsCapability? = null,
     ) {
         @Serializable
         public data class RootsCapability(
             public val listChanged: Boolean = false,
         )
+        @Serializable
+        public data object Sampling
     }
 
     @Serializable
