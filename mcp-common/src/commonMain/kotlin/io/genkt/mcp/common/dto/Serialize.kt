@@ -22,10 +22,10 @@ public fun <Request, Result> McpClientRawRequest<Request, Result>.serializer(): 
     )
 }
 
-public fun McpClientRawRequest.Companion.serializer(method: String): KSerializer<McpClientRawRequest<*, *>> {
+public fun McpClientRawRequest.Companion.serializerOf(method: String): KSerializer<McpClientRawRequest<*, *>>? {
     val requestSerializer = McpClientBasicRequest.serializerOf(method)
     return ComposedSerializer(
-        component1Serializer = requestSerializer as KSerializer<McpClientBasicRequest<*>>,
+        component1Serializer = (requestSerializer ?: return null) as KSerializer<McpClientBasicRequest<*>>,
         component2Serializer = MetaContainer.serializer(McpClientRawRequest.Meta.serializer()),
         descriptor = requestSerializer.descriptor,
         compose = { request, meta -> McpClientRawRequest(request, meta.meta) },
@@ -43,10 +43,10 @@ public fun McpClientRawNotification.serializer(): KSerializer<McpClientRawNotifi
     )
 }
 
-public fun McpClientRawNotification.Companion.serializer(method: String): KSerializer<McpClientRawNotification> {
+public fun McpClientRawNotification.Companion.serializerOf(method: String): KSerializer<McpClientRawNotification>? {
     val notificationSerializer = McpClientBasicNotification.serializerOf(method)
     return ComposedSerializer(
-        component1Serializer = notificationSerializer as KSerializer<McpClientBasicNotification>,
+        component1Serializer = (notificationSerializer ?: return null) as KSerializer<McpClientBasicNotification>,
         component2Serializer = MetaContainer.serializer(McpClientRawNotification.Meta.serializer()),
         descriptor = notificationSerializer.descriptor,
         compose = { notification, meta -> McpClientRawNotification(notification, meta.meta) },
@@ -65,10 +65,10 @@ public fun <Request, Result> McpServerRawRequest<Request, Result>.serializer(): 
     )
 }
 
-public fun McpServerRawRequest.Companion.serializer(method: String): KSerializer<McpServerRawRequest<*, *>> {
+public fun McpServerRawRequest.Companion.serializerOf(method: String): KSerializer<McpServerRawRequest<*, *>>? {
     val requestSerializer = McpServerBasicRequest.serializerOf(method)
     return ComposedSerializer(
-        component1Serializer = requestSerializer as KSerializer<McpServerBasicRequest<*>>,
+        component1Serializer = (requestSerializer ?: return null) as KSerializer<McpServerBasicRequest<*>>,
         component2Serializer = MetaContainer.serializer(McpServerRawRequest.Meta.serializer()),
         descriptor = requestSerializer.descriptor,
         compose = { request, meta -> McpServerRawRequest(request, meta.meta) },
@@ -86,10 +86,10 @@ public fun McpServerRawNotification.serializer(): KSerializer<McpServerRawNotifi
     )
 }
 
-public fun McpServerRawNotification.Companion.serializer(method: String): KSerializer<McpServerRawNotification> {
+public fun McpServerRawNotification.Companion.serializerOf(method: String): KSerializer<McpServerRawNotification>? {
     val notificationSerializer = McpServerBasicNotification.serializerOf(method)
     return ComposedSerializer(
-        component1Serializer = notificationSerializer as KSerializer<McpServerBasicNotification>,
+        component1Serializer = (notificationSerializer ?: return null) as KSerializer<McpServerBasicNotification>,
         component2Serializer = MetaContainer.serializer(McpServerRawNotification.Meta.serializer()),
         descriptor = notificationSerializer.descriptor,
         compose = { notification, meta -> McpServerRawNotification(notification, meta.meta) },
@@ -178,7 +178,7 @@ public fun <T : McpClientBasicRequest<*>> T.serializer(): KSerializer<T> =
         is McpResource.UnsubscribeRequest -> McpResource.UnsubscribeRequest.serializer()
     } as KSerializer<T>
 
-public fun McpClientBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpClientBasicRequest<*>> =
+public fun McpClientBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpClientBasicRequest<*>>? =
     when (method) {
         McpMethods.Tools.Call -> McpTool.CallRequest.serializer()
         McpMethods.Prompts.Get -> McpPrompt.GetRequest.serializer()
@@ -193,7 +193,7 @@ public fun McpClientBasicRequest.Companion.serializerOf(method: String): KSerial
         McpMethods.Logging.SetLevel -> McpLogging.SetLevelRequest.serializer()
         McpMethods.Resources.Subscribe -> McpResource.SubscribeRequest.serializer()
         McpMethods.Resources.Unsubscribe -> McpResource.UnsubscribeRequest.serializer()
-        else -> throw IllegalArgumentException("Unknown McpClientRequest method: $method")
+        else -> null
     }
 
 @Suppress("unchecked_cast")
@@ -205,13 +205,13 @@ public fun <T : McpClientBasicNotification> T.serializer(): KSerializer<T> =
         is McpProgress.Notification -> McpProgress.Notification.serializer()
     } as KSerializer<T>
 
-public fun McpClientBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpClientBasicNotification> =
+public fun McpClientBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpClientBasicNotification>? =
     when (method) {
         McpMethods.Notifications.Cancelled -> McpUtilities.Cancellation.serializer()
         McpMethods.Notifications.Initialized -> McpInit.InitializedNotification.serializer()
         McpMethods.Notifications.Roots.ListChanged -> McpRoot.ListChangedNotification.serializer()
         McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
-        else -> throw IllegalArgumentException("Unknown McpClientNotification method: $method")
+        else -> null
     }
 
 @Suppress("unchecked_cast")
@@ -222,12 +222,12 @@ public fun <T : McpServerBasicRequest<*>> T.serializer(): KSerializer<T> =
         is McpUtilities.Ping -> McpUtilities.Ping.serializer()
     } as KSerializer<T>
 
-public fun McpServerBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpServerBasicRequest<*>> =
+public fun McpServerBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpServerBasicRequest<*>>? =
     when (method) {
         McpMethods.Roots.List -> McpRoot.ListRequest.serializer()
         McpMethods.Sampling.CreateMessage -> McpSampling.CreateMessageRequest.serializer()
         McpMethods.Ping -> McpUtilities.Ping.serializer()
-        else -> throw IllegalArgumentException("Unknown McpServerBasicRequest method: $method")
+        else -> null
     }
 
 @Suppress("unchecked_cast")
@@ -242,7 +242,7 @@ public fun <T : McpServerBasicNotification> T.serializer(): KSerializer<T> =
         is McpResource.UpdatedNotification -> McpResource.UpdatedNotification.serializer()
     } as KSerializer<T>
 
-public fun McpServerBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpServerBasicNotification> =
+public fun McpServerBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpServerBasicNotification>? =
     when (method) {
         McpMethods.Notifications.Cancelled -> McpUtilities.Cancellation.serializer()
         McpMethods.Notifications.Prompts.ListChanged -> McpPrompt.ListChangedNotification.serializer()
@@ -251,7 +251,7 @@ public fun McpServerBasicNotification.Companion.serializerOf(method: String): KS
         McpMethods.Notifications.Message -> McpLogging.LogMessage.serializer()
         McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
         McpMethods.Notifications.Resources.Updated -> McpResource.UpdatedNotification.serializer()
-        else -> throw IllegalArgumentException("Unknown McpServerBasicNotification method: $method")
+        else -> null
     }
 
 
