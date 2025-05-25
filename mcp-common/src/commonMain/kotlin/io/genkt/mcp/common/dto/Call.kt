@@ -8,10 +8,11 @@ public sealed interface McpClientCall<R> {
     public val method: String
 }
 
-public data class McpClientRequest<Result, Request : McpClientBasicRequest<Result>>(
+public data class McpClientRequest<Request, Result>(
     val basicRequest: Request,
     val meta: Meta? = null,
-) : McpClientCall<Result> by basicRequest {
+) : McpClientCall<Result> by basicRequest
+        where Request : McpClientBasicRequest<Result> {
     @Serializable
     public data class Meta(
         /**
@@ -31,14 +32,15 @@ public data class McpClientNotification<Notification : McpClientBasicNotificatio
     public data object Meta
 }
 
-public data class McpClientRawRequest<Result, Request : McpClientBasicRequest<Result>>(
+public data class McpClientRawRequest<Request, Result>(
     public val request: Request,
     public val meta: Meta? = null,
-) {
+) where Request : McpClientBasicRequest<Result> {
     @Serializable
     public data class Meta(
         public val progressToken: McpProgress.Token? = null,
     )
+
     public companion object
 }
 
@@ -65,10 +67,11 @@ public sealed interface McpServerCall<R> {
     public val method: String
 }
 
-public data class McpServerRequest<Result, Request : McpServerBasicRequest<Result>>(
+public data class McpServerRequest<Request, Result>(
     val basicRequest: Request,
     val meta: Meta? = null,
-) : McpServerCall<Result> by basicRequest {
+) : McpServerCall<Result> by basicRequest
+        where Request : McpServerBasicRequest<Result> {
     public data class Meta(
         val progressChannel: SendChannel<McpProgress>? = null,
     )
@@ -81,14 +84,15 @@ public data class McpServerNotification<Notification : McpServerBasicNotificatio
     public data object Meta
 }
 
-public data class McpServerRawRequest<Result, Request : McpServerBasicRequest<Result>>(
+public data class McpServerRawRequest<Request, Result>(
     public val request: Request,
     public val meta: Meta? = null,
-) {
+) where Request : McpServerBasicRequest<Result> {
     @Serializable
     public data class Meta(
         public val progressToken: McpProgress.Token? = null,
     )
+
     public companion object
 }
 

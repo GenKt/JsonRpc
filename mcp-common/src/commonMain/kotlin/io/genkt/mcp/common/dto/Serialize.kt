@@ -11,7 +11,8 @@ import kotlinx.serialization.json.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-public fun <Result, Request : McpClientBasicRequest<Result>> McpClientRawRequest<Result, Request>.serializer(): KSerializer<McpClientRawRequest<Result, Request>> {
+public fun <Request, Result> McpClientRawRequest<Request, Result>.serializer(): KSerializer<McpClientRawRequest<Request, Result>>
+        where Request : McpClientBasicRequest<Result> {
     return ComposedSerializer(
         component1Serializer = request.serializer(),
         component2Serializer = MetaContainer.serializer(McpClientRawRequest.Meta.serializer()),
@@ -53,7 +54,8 @@ public fun McpClientRawNotification.Companion.serializer(method: String): KSeria
     )
 }
 
-public fun <Result, Request : McpServerBasicRequest<Result>> McpServerRawRequest<Result, Request>.serializer(): KSerializer<McpServerRawRequest<Result, Request>> {
+public fun <Request, Result> McpServerRawRequest<Request, Result>.serializer(): KSerializer<McpServerRawRequest<Request, Result>>
+        where Request : McpServerBasicRequest<Result> {
     return ComposedSerializer(
         component1Serializer = request.serializer(),
         component2Serializer = MetaContainer.serializer(McpServerRawRequest.Meta.serializer()),
