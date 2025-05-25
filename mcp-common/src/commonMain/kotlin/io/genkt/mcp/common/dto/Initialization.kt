@@ -12,7 +12,7 @@ public sealed interface McpInit {
         public val capabilities: ClientCapabilities,
         public val clientInfo: Implementation,
         public val protocolVersion: String = McpConstants.ProtocolVersion,
-    ): McpClientRequest<InitializeResult> {
+    ): McpClientBasicRequest<InitializeResult> {
         override val method: String get() = McpMethods.Initialize
         override val resultSerializer: KSerializer<InitializeResult>
             get() = InitializeResult.serializer()
@@ -27,7 +27,7 @@ public sealed interface McpInit {
     )
 
     @Serializable
-    public data object InitializedNotification: McpClientNotification {
+    public data object InitializedNotification: McpClientBasicNotification {
         override val method: String get() = McpMethods.Notifications.Initialized
     }
 

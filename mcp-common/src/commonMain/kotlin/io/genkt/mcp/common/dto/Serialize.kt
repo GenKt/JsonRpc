@@ -1,189 +1,256 @@
 package io.genkt.mcp.common.dto
 
+import io.genkt.mcp.common.McpMethods
 import io.genkt.serialization.json.JsonPolymorphicSerializer
-import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.descriptors.SerialKind
-import kotlinx.serialization.descriptors.buildSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.*
 import kotlinx.serialization.json.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-internal object McpClientCallSerializer
-    : KSerializer<McpClientCall<*>> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpClientCall",
-    childSerializers = listOf(
-        McpClientNotification.serializer(),
-        McpClientRequestSerializer,
-        McpProgress.RawClientRequest.serializer(
-            McpClientRequestSerializer,
-            Unit.serializer() // Actually unused
-        )
-    ),
-    selectSerializer = { clientCall ->
-        when (clientCall) {
-            is McpClientNotification -> McpClientNotification.serializer()
-            is McpClientRequest<*> -> McpClientRequest.serializer()
-            is McpProgress.RawClientRequest<*, *> -> McpProgress.RawClientRequest.serializer(
-                Unit.serializer(), // Actually unused
-                McpClientRequest.serializer(Unit.serializer()),
-            )
+public fun <Result, Request : McpClientBasicRequest<Result>> McpClientRawRequest<Result, Request>.serializer(): KSerializer<McpClientRawRequest<Result, Request>> {
+    return ComposedSerializer(
+        component1Serializer = request.serializer(),
+        component2Serializer = MetaContainer.serializer(McpClientRawRequest.Meta.serializer()),
+        descriptor = request.serializer().descriptor,
+        compose = { request, meta -> McpClientRawRequest(request, meta.meta) },
+        decompose = { (request, meta) -> request to MetaContainer(meta) }
+    )
+}
 
-            is McpProgress.ClientRequest<*, *> -> errorShouldSerializeRawRequest(
-                "McpProgress.ClientRequest",
-                "McpProgress.RawClientRequest"
-            )
-        }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpClientCall")
-    }
+public fun McpClientRawRequest.Companion.serializer(method: String): KSerializer<McpClientRawRequest<*, *>> {
+    val requestSerializer = McpClientBasicRequest.serializerOf(method)
+    return ComposedSerializer(
+        component1Serializer = requestSerializer as KSerializer<McpClientBasicRequest<*>>,
+        component2Serializer = MetaContainer.serializer(McpClientRawRequest.Meta.serializer()),
+        descriptor = requestSerializer.descriptor,
+        compose = { request, meta -> McpClientRawRequest(request, meta.meta) },
+        decompose = { (request, meta) -> request to MetaContainer(meta) }
+    )
+}
+
+public fun McpClientRawNotification.serializer(): KSerializer<McpClientRawNotification> {
+    return ComposedSerializer(
+        component1Serializer = notification.serializer(),
+        component2Serializer = MetaContainer.serializer(McpClientRawNotification.Meta.serializer()),
+        descriptor = notification.serializer().descriptor,
+        compose = { notification, meta -> McpClientRawNotification(notification, meta.meta) },
+        decompose = { (notification, meta) -> notification to MetaContainer(meta) }
+    )
+}
+
+public fun McpClientRawNotification.Companion.serializer(method: String): KSerializer<McpClientRawNotification> {
+    val notificationSerializer = McpClientBasicNotification.serializerOf(method)
+    return ComposedSerializer(
+        component1Serializer = notificationSerializer as KSerializer<McpClientBasicNotification>,
+        component2Serializer = MetaContainer.serializer(McpClientRawNotification.Meta.serializer()),
+        descriptor = notificationSerializer.descriptor,
+        compose = { notification, meta -> McpClientRawNotification(notification, meta.meta) },
+        decompose = { (notification, meta) -> notification to MetaContainer(meta) }
+    )
+}
+
+public fun <Result, Request : McpServerBasicRequest<Result>> McpServerRawRequest<Result, Request>.serializer(): KSerializer<McpServerRawRequest<Result, Request>> {
+    return ComposedSerializer(
+        component1Serializer = request.serializer(),
+        component2Serializer = MetaContainer.serializer(McpServerRawRequest.Meta.serializer()),
+        descriptor = request.serializer().descriptor,
+        compose = { request, meta -> McpServerRawRequest(request, meta.meta) },
+        decompose = { (request, meta) -> request to MetaContainer(meta) }
+    )
+}
+
+public fun McpServerRawRequest.Companion.serializer(method: String): KSerializer<McpServerRawRequest<*, *>> {
+    val requestSerializer = McpServerBasicRequest.serializerOf(method)
+    return ComposedSerializer(
+        component1Serializer = requestSerializer as KSerializer<McpServerBasicRequest<*>>,
+        component2Serializer = MetaContainer.serializer(McpServerRawRequest.Meta.serializer()),
+        descriptor = requestSerializer.descriptor,
+        compose = { request, meta -> McpServerRawRequest(request, meta.meta) },
+        decompose = { (request, meta) -> request to MetaContainer(meta) }
+    )
+}
+
+public fun McpServerRawNotification.serializer(): KSerializer<McpServerRawNotification> {
+    return ComposedSerializer(
+        component1Serializer = notification.serializer(),
+        component2Serializer = MetaContainer.serializer(McpServerRawNotification.Meta.serializer()),
+        descriptor = notification.serializer().descriptor,
+        compose = { notification, meta -> McpServerRawNotification(notification, meta.meta) },
+        decompose = { (notification, meta) -> notification to MetaContainer(meta) }
+    )
+}
+
+public fun McpServerRawNotification.Companion.serializer(method: String): KSerializer<McpServerRawNotification> {
+    val notificationSerializer = McpServerBasicNotification.serializerOf(method)
+    return ComposedSerializer(
+        component1Serializer = notificationSerializer as KSerializer<McpServerBasicNotification>,
+        component2Serializer = MetaContainer.serializer(McpServerRawNotification.Meta.serializer()),
+        descriptor = notificationSerializer.descriptor,
+        compose = { notification, meta -> McpServerRawNotification(notification, meta.meta) },
+        decompose = { (notification, meta) -> notification to MetaContainer(meta) }
+    )
+}
+
+@Serializable
+internal class MetaContainer<T>(
+    @SerialName("_meta")
+    val meta: T?,
 )
 
-internal object McpServerCallSerializer
-    : KSerializer<McpServerCall<*>> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpServerCall",
-    childSerializers = listOf(
-        McpServerNotification.serializer(),
-        McpServerRequestSerializer,
-        McpProgress.RawServerRequest.serializer(
-            Unit.serializer(), // Actually unused
-            McpServerRequestSerializer,
-        )
-    ),
-    selectSerializer = { serverCall ->
-        when (serverCall) {
-            is McpServerNotification -> McpServerNotification.serializer()
-            is McpServerRequest<*> -> McpServerRequest.serializer()
-            is McpProgress.RawServerRequest<*, *> -> McpProgress.RawServerRequest.serializer(
-                Unit.serializer(), // Actually unused
-                McpServerRequest.serializer(Unit.serializer()),
-            )
 
-            is McpProgress.ServerRequest<*, *> -> errorShouldSerializeRawRequest(
-                "McpProgress.ServerRequest",
-                "McpProgress.RawServerRequest"
-            )
+internal class ComposedSerializer<T, T1, T2>(
+    private val component1Serializer: KSerializer<T1>,
+    private val component2Serializer: KSerializer<T2>,
+    override val descriptor: SerialDescriptor,
+    private val compose: (T1, T2) -> T,
+    private val decompose: (T) -> Pair<T1, T2>,
+) : KSerializer<T> {
+    override fun serialize(encoder: Encoder, value: T) {
+        val (component1Value, component2Value) = decompose(value)
+        encoder.encodeStructure(descriptor) {
+            val compositeDecoder = this
+            val mockEncoder = MockEncoder(encoder, compositeDecoder)
+            component1Serializer.serialize(mockEncoder, component1Value)
+            component2Serializer.serialize(mockEncoder, component2Value)
         }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpServerCall")
     }
-)
 
-internal object McpClientRequestSerializer
-    : KSerializer<McpClientRequest<*>> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpClientRequest",
-    childSerializers = listOf(
-        McpTool.CallRequest.serializer(),
-        McpPrompt.GetRequest.serializer(),
-        McpInit.InitializeRequest.serializer(),
-        McpPrompt.ListRequest.serializer(),
-        McpResource.ListRequest.serializer(),
-        McpTool.ListRequest.serializer(),
-        McpResource.ListTemplateRequest.serializer(),
-        McpUtilities.Ping.serializer(),
-        McpResource.ReadRequest.serializer(),
-        McpCompletion.Request.serializer(),
-        McpLogging.SetLevelRequest.serializer(),
-        McpResource.SubscribeRequest.serializer(),
-        McpResource.UnsubscribeRequest.serializer(),
-    ),
-    selectSerializer = { clientRequest ->
-        when (clientRequest) {
-            is McpTool.CallRequest -> McpTool.CallRequest.serializer()
-            is McpPrompt.GetRequest -> McpPrompt.GetRequest.serializer()
-            is McpInit.InitializeRequest -> McpInit.InitializeRequest.serializer()
-            is McpPrompt.ListRequest -> McpPrompt.ListRequest.serializer()
-            is McpResource.ListRequest -> McpResource.ListRequest.serializer()
-            is McpTool.ListRequest -> McpTool.ListRequest.serializer()
-            is McpResource.ListTemplateRequest -> McpResource.ListTemplateRequest.serializer()
-            is McpUtilities.Ping -> McpUtilities.Ping.serializer()
-            is McpResource.ReadRequest -> McpResource.ReadRequest.serializer()
-            is McpCompletion.Request -> McpCompletion.Request.serializer()
-            is McpLogging.SetLevelRequest -> McpLogging.SetLevelRequest.serializer()
-            is McpResource.SubscribeRequest -> McpResource.SubscribeRequest.serializer()
-            is McpResource.UnsubscribeRequest -> McpResource.UnsubscribeRequest.serializer()
+    override fun deserialize(decoder: Decoder): T {
+        return decoder.decodeStructure(descriptor) {
+            val compositeDecoder = this
+            val mockDecoder = MockDecoder(decoder, compositeDecoder)
+            val component1Value = component1Serializer.deserialize(mockDecoder)
+            val component2Value = component2Serializer.deserialize(mockDecoder)
+            compose(component1Value, component2Value)
         }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpClientRequest")
     }
-)
 
-internal object McpServerRequestSerializer
-    : KSerializer<McpServerRequest<*>> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpServerRequest",
-    childSerializers = listOf(
-        McpSampling.CreateMessageRequest.serializer(),
-        McpRoot.ListRequest.serializer(),
-        McpUtilities.Ping.serializer()
-    ),
-    selectSerializer = { serverRequest ->
-        when (serverRequest) {
-            is McpSampling.CreateMessageRequest -> McpSampling.CreateMessageRequest.serializer()
-            is McpRoot.ListRequest -> McpRoot.ListRequest.serializer()
-            is McpUtilities.Ping -> McpUtilities.Ping.serializer()
-        }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpServerRequest")
+    internal class MockDecoder(
+        val decoder: Decoder,
+        val compositeDecoder: CompositeDecoder
+    ) : Decoder by decoder {
+        override fun beginStructure(descriptor: SerialDescriptor): CompositeDecoder =
+            MockCompositeDecoder(compositeDecoder)
     }
-)
 
-internal object McpServerNotificationSerializer
-    : KSerializer<McpServerNotification> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpServerNotification",
-    childSerializers = listOf(
-        McpUtilities.Cancellation.serializer(),
-        McpPrompt.ListChangedNotification.serializer(),
-        McpResource.ListChangedNotification.serializer(),
-        McpTool.ListChangedNotification.serializer(),
-        McpLogging.LogMessage.serializer(),
-        McpProgress.Notification.serializer(),
-        McpResource.UpdatedNotification.serializer(),
-    ),
-    selectSerializer = { serverNotification ->
-        when (serverNotification) {
-            is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
-            is McpPrompt.ListChangedNotification -> McpPrompt.ListChangedNotification.serializer()
-            is McpResource.ListChangedNotification -> McpResource.ListChangedNotification.serializer()
-            is McpTool.ListChangedNotification -> McpTool.ListChangedNotification.serializer()
-            is McpLogging.LogMessage -> McpLogging.LogMessage.serializer()
-            is McpProgress.Notification -> McpProgress.Notification.serializer()
-            is McpResource.UpdatedNotification -> McpResource.UpdatedNotification.serializer()
-        }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpServerNotification")
+    internal class MockEncoder(
+        val encoder: Encoder,
+        val compositeEncoder: CompositeEncoder
+    ) : Encoder by encoder {
+        override fun beginStructure(descriptor: SerialDescriptor): CompositeEncoder =
+            MockCompositeEncoder(compositeEncoder)
     }
-)
 
-internal object McpClientNotificationSerializer
-    : KSerializer<McpClientNotification> by JsonPolymorphicSerializer(
-    serialName = "io.genkt.mcp.common.dto.McpClientNotification",
-    childSerializers = listOf(
-        McpUtilities.Cancellation.serializer(),
-        McpInit.InitializedNotification.serializer(),
-        McpRoot.ListChangedNotification.serializer(),
-        McpProgress.Notification.serializer(),
-    ),
-    selectSerializer = { clientNotification ->
-        when (clientNotification) {
-            is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
-            is McpInit.InitializedNotification -> McpInit.InitializedNotification.serializer()
-            is McpRoot.ListChangedNotification -> McpRoot.ListChangedNotification.serializer()
-            is McpProgress.Notification -> McpProgress.Notification.serializer()
-        }
-    },
-    selectDeserializer = {
-        errorRequireJsonRpcMethod("McpClientNotification")
+    internal class MockCompositeEncoder(
+        val compositeEncoder: CompositeEncoder
+    ) : CompositeEncoder by compositeEncoder {
+        override fun endStructure(descriptor: SerialDescriptor) {}
     }
-)
+
+    internal class MockCompositeDecoder(
+        val compositeDecoder: CompositeDecoder
+    ) : CompositeDecoder by compositeDecoder {
+        override fun endStructure(descriptor: SerialDescriptor) {}
+    }
+}
+
+@Suppress("unchecked_cast")
+public fun <T : McpClientBasicRequest<*>> T.serializer(): KSerializer<T> =
+    when (this) {
+        is McpTool.CallRequest -> McpTool.CallRequest.serializer()
+        is McpPrompt.GetRequest -> McpPrompt.GetRequest.serializer()
+        is McpInit.InitializeRequest -> McpInit.InitializeRequest.serializer()
+        is McpPrompt.ListRequest -> McpPrompt.ListRequest.serializer()
+        is McpResource.ListRequest -> McpResource.ListRequest.serializer()
+        is McpTool.ListRequest -> McpTool.ListRequest.serializer()
+        is McpResource.ListTemplateRequest -> McpResource.ListTemplateRequest.serializer()
+        is McpUtilities.Ping -> McpUtilities.Ping.serializer()
+        is McpResource.ReadRequest -> McpResource.ReadRequest.serializer()
+        is McpCompletion.Request -> McpCompletion.Request.serializer()
+        is McpLogging.SetLevelRequest -> McpLogging.SetLevelRequest.serializer()
+        is McpResource.SubscribeRequest -> McpResource.SubscribeRequest.serializer()
+        is McpResource.UnsubscribeRequest -> McpResource.UnsubscribeRequest.serializer()
+    } as KSerializer<T>
+
+public fun McpClientBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpClientBasicRequest<*>> =
+    when (method) {
+        McpMethods.Tools.Call -> McpTool.CallRequest.serializer()
+        McpMethods.Prompts.Get -> McpPrompt.GetRequest.serializer()
+        McpMethods.Initialize -> McpInit.InitializeRequest.serializer()
+        McpMethods.Prompts.List -> McpPrompt.ListRequest.serializer()
+        McpMethods.Resources.List -> McpResource.ListRequest.serializer()
+        McpMethods.Tools.List -> McpTool.ListRequest.serializer()
+        McpMethods.Resources.Templates.List -> McpResource.ListTemplateRequest.serializer()
+        McpMethods.Ping -> McpUtilities.Ping.serializer()
+        McpMethods.Resources.Read -> McpResource.ReadRequest.serializer()
+        McpMethods.Completion.Complete -> McpCompletion.Request.serializer()
+        McpMethods.Logging.SetLevel -> McpLogging.SetLevelRequest.serializer()
+        McpMethods.Resources.Subscribe -> McpResource.SubscribeRequest.serializer()
+        McpMethods.Resources.Unsubscribe -> McpResource.UnsubscribeRequest.serializer()
+        else -> throw IllegalArgumentException("Unknown McpClientRequest method: $method")
+    }
+
+@Suppress("unchecked_cast")
+public fun <T : McpClientBasicNotification> T.serializer(): KSerializer<T> =
+    when (this) {
+        is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
+        is McpInit.InitializedNotification -> McpInit.InitializedNotification.serializer()
+        is McpRoot.ListChangedNotification -> McpRoot.ListChangedNotification.serializer()
+        is McpProgress.Notification -> McpProgress.Notification.serializer()
+    } as KSerializer<T>
+
+public fun McpClientBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpClientBasicNotification> =
+    when (method) {
+        McpMethods.Notifications.Cancelled -> McpUtilities.Cancellation.serializer()
+        McpMethods.Notifications.Initialized -> McpInit.InitializedNotification.serializer()
+        McpMethods.Notifications.Roots.ListChanged -> McpRoot.ListChangedNotification.serializer()
+        McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
+        else -> throw IllegalArgumentException("Unknown McpClientNotification method: $method")
+    }
+
+@Suppress("unchecked_cast")
+public fun <T : McpServerBasicRequest<*>> T.serializer(): KSerializer<T> =
+    when (this) {
+        is McpRoot.ListRequest -> McpRoot.ListRequest.serializer()
+        is McpSampling.CreateMessageRequest -> McpSampling.CreateMessageRequest.serializer()
+        is McpUtilities.Ping -> McpUtilities.Ping.serializer()
+    } as KSerializer<T>
+
+public fun McpServerBasicRequest.Companion.serializerOf(method: String): KSerializer<out McpServerBasicRequest<*>> =
+    when (method) {
+        McpMethods.Roots.List -> McpRoot.ListRequest.serializer()
+        McpMethods.Sampling.CreateMessage -> McpSampling.CreateMessageRequest.serializer()
+        McpMethods.Ping -> McpUtilities.Ping.serializer()
+        else -> throw IllegalArgumentException("Unknown McpServerBasicRequest method: $method")
+    }
+
+@Suppress("unchecked_cast")
+public fun <T : McpServerBasicNotification> T.serializer(): KSerializer<T> =
+    when (this) {
+        is McpUtilities.Cancellation -> McpUtilities.Cancellation.serializer()
+        is McpPrompt.ListChangedNotification -> McpPrompt.ListChangedNotification.serializer()
+        is McpResource.ListChangedNotification -> McpResource.ListChangedNotification.serializer()
+        is McpTool.ListChangedNotification -> McpTool.ListChangedNotification.serializer()
+        is McpLogging.LogMessage -> McpLogging.LogMessage.serializer()
+        is McpProgress.Notification -> McpProgress.Notification.serializer()
+        is McpResource.UpdatedNotification -> McpResource.UpdatedNotification.serializer()
+    } as KSerializer<T>
+
+public fun McpServerBasicNotification.Companion.serializerOf(method: String): KSerializer<out McpServerBasicNotification> =
+    when (method) {
+        McpMethods.Notifications.Cancelled -> McpUtilities.Cancellation.serializer()
+        McpMethods.Notifications.Prompts.ListChanged -> McpPrompt.ListChangedNotification.serializer()
+        McpMethods.Notifications.Resources.ListChanged -> McpResource.ListChangedNotification.serializer()
+        McpMethods.Notifications.Tools.ListChanged -> McpTool.ListChangedNotification.serializer()
+        McpMethods.Notifications.Message -> McpLogging.LogMessage.serializer()
+        McpMethods.Notifications.Progress -> McpProgress.Notification.serializer()
+        McpMethods.Notifications.Resources.Updated -> McpResource.UpdatedNotification.serializer()
+        else -> throw IllegalArgumentException("Unknown McpServerBasicNotification method: $method")
+    }
 
 
 internal object McpResourceContentSerializer
@@ -286,90 +353,6 @@ internal object McpCompletionReferenceSerializer
     }
 )
 
-internal class McpClientProgressRequestSerializer<Result, Request : McpClientRequest<Result>>(
-    resultSerializer: KSerializer<Result>,
-    val requestSerializer: KSerializer<Request>,
-) : KSerializer<McpProgress.ClientRequest<Result, Request>> {
-    val rawRequestSerializer = McpProgress.RawClientRequest.serializer(resultSerializer, requestSerializer)
-    override val descriptor: SerialDescriptor by requestSerializer::descriptor
-
-    override fun serialize(
-        encoder: Encoder,
-        value: McpProgress.ClientRequest<Result, Request>
-    ) {
-        encoder.encodeSerializableValue(rawRequestSerializer, value.rawRequest)
-    }
-
-    override fun deserialize(decoder: Decoder): McpProgress.ClientRequest<Result, Request> {
-        errorRequireJsonRpcMethod("McpProgress.ClientRequest. Deserialize McpProgress.RawClientRequest instead")
-    }
-}
-
-internal class McpServerProgressRequestSerializer<Result, Request : McpServerRequest<Result>>(
-    resultSerializer: KSerializer<Result>,
-    val requestSerializer: KSerializer<Request>,
-) : KSerializer<McpProgress.ServerRequest<Result, Request>> {
-    val rawRequestSerializer = McpProgress.RawServerRequest.serializer(resultSerializer, requestSerializer)
-    override val descriptor: SerialDescriptor by requestSerializer::descriptor
-    override fun serialize(encoder: Encoder, value: McpProgress.ServerRequest<Result, Request>) {
-        encoder.encodeSerializableValue(rawRequestSerializer, value.rawRequest)
-    }
-
-    override fun deserialize(decoder: Decoder): McpProgress.ServerRequest<Result, Request> {
-        errorRequireJsonRpcMethod("McpProgress.ServerRequest. Deserialize McpProgress.RawServerRequest instead")
-    }
-}
-
-internal class RawMcpClientProgressRequestSerializer<Result, Request : McpClientRequest<Result>>(
-    @Suppress("unused")
-    resultSerializer: KSerializer<Result>,
-    val requestSerializer: KSerializer<Request>,
-) : KSerializer<McpProgress.RawClientRequest<Result, Request>> {
-    override val descriptor: SerialDescriptor =
-        buildContextualSerialDescriptor("io.genkt.mcp.common.dto.McpProgress.RawClientRequest")
-
-    override fun serialize(encoder: Encoder, value: McpProgress.RawClientRequest<Result, Request>) {
-        checkJsonEncoderOrThrow(encoder)
-        val requestJson = encoder.json.encodeToJsonElement(requestSerializer, value.request).jsonObject
-        val requestJsonWithProgressToken = requestJson.addProgressToken(encoder.json, value.token)
-        encoder.encodeJsonElement(requestJsonWithProgressToken)
-    }
-
-    override fun deserialize(decoder: Decoder): McpProgress.RawClientRequest<Result, Request> {
-        checkJsonDecoderOrThrow(decoder)
-        val requestJson = decoder.decodeJsonElement().jsonObject
-        val progressTokenJson = requestJson.progressTokenOrThrow()
-        val token = decoder.json.decodeFromJsonElement(McpProgress.Token.serializer(), progressTokenJson)
-        val request = decoder.json.decodeFromJsonElement(requestSerializer, requestJson)
-        return McpProgress.RawClientRequest(request, token)
-    }
-}
-
-internal class RawMcpServerProgressRequestSerializer<Result, Request : McpServerRequest<Result>>(
-    @Suppress("unused")
-    resultSerializer: KSerializer<Result>,
-    val requestSerializer: KSerializer<Request>,
-) : KSerializer<McpProgress.RawServerRequest<Result, Request>> {
-    override val descriptor: SerialDescriptor =
-        buildContextualSerialDescriptor("io.genkt.mcp.common.dto.McpProgress.RawServerRequest")
-
-    override fun serialize(encoder: Encoder, value: McpProgress.RawServerRequest<Result, Request>) {
-        checkJsonEncoderOrThrow(encoder)
-        val requestJson = encoder.json.encodeToJsonElement(requestSerializer, value.request).jsonObject
-        val requestJsonWithProgressToken = requestJson.addProgressToken(encoder.json, value.token)
-        encoder.encodeJsonElement(requestJsonWithProgressToken)
-    }
-
-    override fun deserialize(decoder: Decoder): McpProgress.RawServerRequest<Result, Request> {
-        checkJsonDecoderOrThrow(decoder)
-        val requestJson = decoder.decodeJsonElement().jsonObject
-        val progressTokenJson = requestJson.progressTokenOrThrow()
-        val token = decoder.json.decodeFromJsonElement(McpProgress.Token.serializer(), progressTokenJson)
-        val request = decoder.json.decodeFromJsonElement(requestSerializer, requestJson)
-        return McpProgress.RawServerRequest(request, token)
-    }
-}
-
 internal object McpProgressTokenSerializer
     : KSerializer<McpProgress.Token> by JsonPolymorphicSerializer(
     serialName = "io.genkt.mcp.common.dto.McpProgress.Token",
@@ -393,36 +376,6 @@ internal object McpProgressTokenSerializer
     }
 )
 
-private fun JsonObject.addProgressToken(
-    json: Json,
-    token: McpProgress.Token
-): JsonObject = buildJsonObject {
-    putJsonObject("_meta") {
-        put(
-            "progressToken",
-            json.encodeToJsonElement(
-                McpProgress.Token.serializer(),
-                token
-            )
-        )
-    }
-    this@addProgressToken.forEach { (key, value) -> put(key, value) }
-}
-
-private fun errorShouldSerializeRawRequest(wrapped: String, raw: String): Nothing {
-    throw UnsupportedOperationException("You shouldn't serialize $wrapped, serialize $raw instead.")
-}
-
-private fun errorRequireJsonRpcMethod(serialName: String): Nothing {
-    throw UnsupportedOperationException("You shouldn't deserialize $serialName with unknown JsonRpc method.")
-}
-
-@OptIn(InternalSerializationApi::class)
-private fun buildContextualSerialDescriptor(serialName: String): SerialDescriptor = buildSerialDescriptor(
-    serialName,
-    SerialKind.CONTEXTUAL
-)
-
 @OptIn(ExperimentalContracts::class)
 private fun JsonElement.checkJsonObjectOrThrow(message: JsonElement.() -> String = { "Invalid call: $this" }) {
     contract { returns() implies (this@checkJsonObjectOrThrow is JsonObject) }
@@ -433,23 +386,4 @@ private fun JsonElement.checkJsonObjectOrThrow(message: JsonElement.() -> String
 private fun JsonElement.checkJsonPrimitiveOrThrow(message: JsonElement.() -> String = { "Invalid call: $this" }) {
     contract { returns() implies (this@checkJsonPrimitiveOrThrow is JsonPrimitive) }
     this as? JsonPrimitive ?: throw IllegalArgumentException(message())
-}
-
-private fun JsonObject.progressTokenOrThrow(): JsonElement =
-    this.getOrElse("_meta") { throw IllegalArgumentException("Missing '_meta' field in progress request: $this") }
-        .let { it as? JsonObject ?: throw IllegalArgumentException("Invalid '_meta' field in progress request: $this") }
-        .getOrElse("progressToken") { throw IllegalArgumentException("Missing 'progressToken' field in progress request: $this") }
-
-@OptIn(ExperimentalContracts::class)
-private fun checkJsonEncoderOrThrow(encoder: Encoder) {
-    contract { returns() implies (encoder is JsonEncoder) }
-    encoder as? JsonEncoder
-        ?: throw IllegalArgumentException("This serializer can be used only with Json format")
-}
-
-@OptIn(ExperimentalContracts::class)
-private fun checkJsonDecoderOrThrow(encoder: Decoder) {
-    contract { returns() implies (encoder is JsonDecoder) }
-    encoder as? JsonDecoder
-        ?: throw IllegalArgumentException("This serializer can be used only with Json format")
 }

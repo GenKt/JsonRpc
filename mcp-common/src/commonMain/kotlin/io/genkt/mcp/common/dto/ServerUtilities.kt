@@ -15,7 +15,7 @@ public data class McpCompletion(
     public data class Request(
         public val ref: Reference,
         public val argument: Argument,
-    ) : McpClientRequest<Result> {
+    ) : McpClientBasicRequest<Result> {
         override val method: String get() = McpMethods.Completion.Complete
         override val resultSerializer: KSerializer<Result>
             get() = Result.serializer()
@@ -58,7 +58,7 @@ public sealed interface McpLogging {
     @Serializable
     public data class SetLevelRequest(
         public val level: Level,
-    ) : McpClientRequest<SetLevelResult> {
+    ) : McpClientBasicRequest<SetLevelResult> {
         override val method: String get() = McpMethods.Logging.SetLevel
         override val resultSerializer: KSerializer<SetLevelResult>
             get() = SetLevelResult.serializer()
@@ -72,7 +72,7 @@ public sealed interface McpLogging {
         public val level: Level,
         public val logger: String,
         public val data: JsonElement,
-    ) : McpServerNotification {
+    ) : McpServerBasicNotification {
         override val method: String get() = McpMethods.Notifications.Message
     }
 }

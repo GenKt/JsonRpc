@@ -15,7 +15,7 @@ public data class McpPrompt(
     @Serializable
     public data class ListRequest(
         public override val cursor: McpPaginated.Cursor? = null
-    ): McpClientRequest<ListResult>, McpPaginated.Request {
+    ): McpClientBasicRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Prompts.List
         override val resultSerializer: KSerializer<ListResult>
             get() = ListResult.serializer()
@@ -31,14 +31,14 @@ public data class McpPrompt(
     public data class GetRequest(
         public val name: String,
         public val arguments: Map<String, String>
-    ): McpClientRequest<GetResult> {
+    ): McpClientBasicRequest<GetResult> {
         override val method: String get() = McpMethods.Prompts.Get
         override val resultSerializer: KSerializer<GetResult>
             get() = GetResult.serializer()
     }
 
     @Serializable
-    public data object ListChangedNotification: McpServerNotification {
+    public data object ListChangedNotification: McpServerBasicNotification {
         override val method: String get() = McpMethods.Notifications.Prompts.ListChanged
     }
 
@@ -73,7 +73,7 @@ public data class McpResource(
     @Serializable
     public data class ListRequest(
         public override val cursor: McpPaginated.Cursor? = null
-    ): McpClientRequest<ListResult>, McpPaginated.Request {
+    ): McpClientBasicRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Resources.List
         override val resultSerializer: KSerializer<ListResult>
             get() = ListResult.serializer()
@@ -88,7 +88,7 @@ public data class McpResource(
     @Serializable
     public data class ListTemplateRequest(
         public override val cursor: McpPaginated.Cursor? = null
-    ): McpClientRequest<ListTemplateResult>, McpPaginated.Request {
+    ): McpClientBasicRequest<ListTemplateResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Resources.Templates.List
         override val resultSerializer: KSerializer<ListTemplateResult>
             get() = ListTemplateResult.serializer()
@@ -102,7 +102,7 @@ public data class McpResource(
     @Serializable
     public data class ReadRequest(
         public val uri: String,
-    ): McpClientRequest<ReadResult> {
+    ): McpClientBasicRequest<ReadResult> {
         override val method: String get() = McpMethods.Resources.Read
         override val resultSerializer: KSerializer<ReadResult>
             get() = ReadResult.serializer()
@@ -114,7 +114,7 @@ public data class McpResource(
     )
 
     @Serializable
-    public data object ListChangedNotification: McpServerNotification {
+    public data object ListChangedNotification: McpServerBasicNotification {
         override val method: String get() = McpMethods.Notifications.Resources.ListChanged
     }
 
@@ -130,7 +130,7 @@ public data class McpResource(
     @Serializable
     public data class SubscribeRequest(
         public val uri: String,
-    ): McpClientRequest<SubscribeResult> {
+    ): McpClientBasicRequest<SubscribeResult> {
         override val method: String get() = McpMethods.Resources.Subscribe
         override val resultSerializer: KSerializer<SubscribeResult>
             get() = SubscribeResult.serializer()
@@ -142,7 +142,7 @@ public data class McpResource(
     @Serializable
     public data class UnsubscribeRequest(
         public val uri: String,
-    ): McpClientRequest<UnsubscribeResult> {
+    ): McpClientBasicRequest<UnsubscribeResult> {
         override val method: String get() = McpMethods.Resources.Unsubscribe
         override val resultSerializer: KSerializer<UnsubscribeResult>
             get() = UnsubscribeResult.serializer()
@@ -154,7 +154,7 @@ public data class McpResource(
     @Serializable
     public data class UpdatedNotification(
         public val uri: String,
-    ): McpServerNotification {
+    ): McpServerBasicNotification {
         override val method: String get() = McpMethods.Notifications.Resources.Updated
     }
 }
@@ -176,7 +176,7 @@ public data class McpTool(
     @Serializable
     public data class ListRequest(
         public override val cursor: McpPaginated.Cursor? = null
-    ): McpClientRequest<ListResult>, McpPaginated.Request {
+    ): McpClientBasicRequest<ListResult>, McpPaginated.Request {
         override val method: String get() = McpMethods.Tools.List
         override val resultSerializer: KSerializer<ListResult>
             get() = ListResult.serializer()
@@ -192,7 +192,7 @@ public data class McpTool(
     public data class CallRequest(
         public val name: String,
         public val arguments: JsonObject
-    ): McpClientRequest<CallResult> {
+    ): McpClientBasicRequest<CallResult> {
         override val method: String get() = McpMethods.Tools.Call
         override val resultSerializer: KSerializer<CallResult>
             get() = CallResult.serializer()
@@ -205,7 +205,7 @@ public data class McpTool(
     )
 
     @Serializable
-    public data object ListChangedNotification: McpServerNotification {
+    public data object ListChangedNotification: McpServerBasicNotification {
         override val method: String get() = McpMethods.Notifications.Tools.ListChanged
     }
 
