@@ -29,7 +29,11 @@ public sealed interface McpUtilities {
     }
 }
 
-public sealed interface McpProgress {
+public data class McpProgress(
+    public val progress: Double,
+    public val total: Double? = null,
+    public val message: String? = null,
+) {
     /**
      * This request wraps a [RawClientRequest] to enable sending [Notification]s.
      * The server developer can pass a [progressChannel] to receive [Notification]s.
@@ -82,7 +86,9 @@ public sealed interface McpProgress {
         override val method: String get() = McpMethods.Notifications.Progress
     }
 
-    // TODO: Serialization
+    public fun withToken(token: Token): Notification =
+        Notification(progressToken = token, progress = progress, total = total, message = message)
+
     @Serializable(with = McpProgressTokenSerializer::class)
     public sealed interface Token {
         @Serializable
