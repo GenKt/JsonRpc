@@ -3,7 +3,7 @@ package io.genkt.mcp.common.dto
 import io.genkt.jsonrpc.RequestId
 import io.genkt.mcp.common.McpMethods
 import kotlinx.coroutines.channels.SendChannel
-import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 import kotlin.random.Random
@@ -14,7 +14,7 @@ public sealed interface McpUtilities {
     @Serializable
     public data object Ping : McpClientRequest<Pong>, McpServerRequest<Pong> {
         override val method: String get() = McpMethods.Ping
-        override val resultDeserializer: DeserializationStrategy<Pong> get() = Pong.serializer()
+        override val resultSerializer: KSerializer<Pong> get() = Pong.serializer()
     }
 
     @Serializable

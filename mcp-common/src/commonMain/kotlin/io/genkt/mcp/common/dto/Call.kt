@@ -2,6 +2,7 @@ package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpMethods
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationStrategy
 
@@ -17,7 +18,7 @@ public sealed interface McpProgressRequest<out Result, out Request> : McpCall<Re
 }
 
 @Serializable(with = McpServerCallSerializer::class)
-public sealed interface McpServerCall<out R> : McpCall<R> {
+public sealed interface McpServerCall<R> : McpCall<R> {
     public companion object {
         public fun serializer(): SerializationStrategy<McpServerCall<*>> = McpServerCallSerializer
         public fun deserializer(method: String): DeserializationStrategy<McpServerCall<*>>? =
@@ -27,7 +28,7 @@ public sealed interface McpServerCall<out R> : McpCall<R> {
 }
 
 @Serializable(with = McpClientCallSerializer::class)
-public sealed interface McpClientCall<out R> : McpCall<R> {
+public sealed interface McpClientCall<R> : McpCall<R> {
     public companion object {
         public fun serializer(): SerializationStrategy<McpClientCall<*>> = McpClientCallSerializer
         public fun deserializer(method: String): DeserializationStrategy<McpClientCall<*>> =
@@ -37,8 +38,8 @@ public sealed interface McpClientCall<out R> : McpCall<R> {
 }
 
 @Serializable(with = McpClientRequestSerializer::class)
-public sealed interface McpClientRequest<out R> : McpClientCall<R> {
-    public val resultDeserializer: DeserializationStrategy<R>
+public sealed interface McpClientRequest<R> : McpClientCall<R> {
+    public val resultSerializer: KSerializer<R>
 
     public companion object {
         public fun serializer(): SerializationStrategy<McpClientRequest<*>> = McpClientRequestSerializer
@@ -77,8 +78,8 @@ public sealed interface McpClientNotification : McpClientCall<Unit> {
 }
 
 @Serializable(with = McpServerRequestSerializer::class)
-public sealed interface McpServerRequest<out R> : McpServerCall<R> {
-    public val resultDeserializer: DeserializationStrategy<R>
+public sealed interface McpServerRequest<R> : McpServerCall<R> {
+    public val resultSerializer: KSerializer<R>
 
     public companion object {
         public fun serializer(): SerializationStrategy<McpServerRequest<*>> = McpServerRequestSerializer

@@ -2,6 +2,7 @@ package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpMethods
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlin.jvm.JvmInline
@@ -14,7 +15,7 @@ public data class McpRoot(
     @Serializable
     public data object ListRequest : McpServerRequest<ListResponse> {
         override val method: String get() = McpMethods.Roots.List
-        override val resultDeserializer: DeserializationStrategy<ListResponse>
+        override val resultSerializer: KSerializer<ListResponse>
             get() = ListResponse.serializer()
     }
 
@@ -42,7 +43,7 @@ public sealed interface McpSampling {
         public val metadata: JsonObject? = null,
     ) : McpServerRequest<CreateMessageResult> {
         override val method: String get() = McpMethods.Sampling.CreateMessage
-        override val resultDeserializer: DeserializationStrategy<CreateMessageResult>
+        override val resultSerializer: KSerializer<CreateMessageResult>
             get() = CreateMessageResult.serializer()
     }
 

@@ -1,7 +1,7 @@
 package io.genkt.mcp.common.dto
 
 import io.genkt.mcp.common.McpMethods
-import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -17,7 +17,7 @@ public data class McpCompletion(
         public val argument: Argument,
     ) : McpClientRequest<Result> {
         override val method: String get() = McpMethods.Completion.Complete
-        override val resultDeserializer: DeserializationStrategy<Result>
+        override val resultSerializer: KSerializer<Result>
             get() = Result.serializer()
 
         @Serializable
@@ -60,7 +60,7 @@ public sealed interface McpLogging {
         public val level: Level,
     ) : McpClientRequest<SetLevelResult> {
         override val method: String get() = McpMethods.Logging.SetLevel
-        override val resultDeserializer: DeserializationStrategy<SetLevelResult>
+        override val resultSerializer: KSerializer<SetLevelResult>
             get() = SetLevelResult.serializer()
     }
 
