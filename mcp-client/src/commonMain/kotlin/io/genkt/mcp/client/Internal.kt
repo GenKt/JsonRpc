@@ -1,8 +1,6 @@
 package io.genkt.mcp.client
 
 import io.genkt.jsonprc.client.JsonRpcClient
-import io.genkt.jsonprc.client.sendNotification
-import io.genkt.jsonprc.client.sendRequest
 import io.genkt.jsonrpc.*
 import io.genkt.jsonrpc.server.JsonRpcServer
 import io.genkt.mcp.common.McpMethodNotFoundException
@@ -10,186 +8,82 @@ import io.genkt.mcp.common.McpParamParseException
 import io.genkt.mcp.common.dto.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 
-// This constructor may be unsafe
 internal class McpClientImpl(
     override val info: McpInit.Implementation,
     override val capabilities: McpInit.ClientCapabilities,
-    override val onRoot: suspend (McpRoot.ListRequest) -> McpRoot.ListResponse,
-    override val onSampling: suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult,
-    override val onNotification: suspend (McpServerNotification) -> Unit,
+    val onRoot: suspend (McpRoot.ListRequest) -> McpRoot.ListResponse,
+    val onSampling: suspend (McpSampling.CreateMessageRequest) -> McpSampling.CreateMessageResult,
+    val onNotification: suspend (McpServerNotification<McpServerBasicNotification>) -> Unit,
     override val transport: JsonRpcTransport,
-    override val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
-    override val progressTokenGenerator: () -> McpProgress.Token = McpProgress.defaultStringTokenGenerator,
-    override val errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    val progressTokenGenerator: () -> McpProgress.Token = McpProgress.defaultStringTokenGenerator,
+    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    val callInterceptor: Interceptor<suspend (McpClientCall<*>) -> Any?> = { it },
     additionalContext: CoroutineContext = EmptyCoroutineContext,
 ) : McpClient {
-    val onGoingProgressMutex = Mutex()
-    private val ongoingProgress = mutableMapOf<McpProgress.Token, SendChannel<McpProgress.Notification>>()
     override val coroutineScope = transport.coroutineScope.newChild(additionalContext)
+    private val onGoingProgressMutex = Mutex()
+    private val ongoingProgress = mutableMapOf<McpProgress.Token, SendChannel<McpProgress.Notification>>()
     private val transportPair = transport.shareAsClientAndServerIn()
+    private val jsonRpcServer = JsonRpcServer(
+        transport = transportPair.second,
+        onRequest = ::handleJsonRpcRequest,
+        onNotification = ::handleJsonRpcNotification,
+    )
+    private val jsonRpcClient = JsonRpcClient(transportPair.first)
 
-    override val jsonRpcServer = JsonRpcServer(
-        transportPair.second,
-        { jsonRpcRequest ->
-            val paramJsonObject = jsonRpcRequest.params as? JsonObject
-                ?: return@JsonRpcServer JsonRpcFailResponse(
-                    id = jsonRpcRequest.id,
-                    error = JsonRpcFailResponse.Error(
-                        code = JsonRpcFailResponse.Error.Code.ParseError,
-                        message = "Invalid params for method ${jsonRpcRequest.method}: params must be a JsonObject",
-                    )
-                )
-            val paramDeserializer = McpServerRequest.deserializer(jsonRpcRequest.method)
-                ?: return@JsonRpcServer JsonRpcFailResponse(
-                    id = jsonRpcRequest.id,
-                    error = JsonRpcFailResponse.Error(
-                        code = JsonRpcFailResponse.Error.Code.MethodNotFound,
-                        message = "Requested method ${jsonRpcRequest.method} is not supported",
-                    )
-                )
-            val mcpRequest = try {
-                JsonRpc.json.decodeFromJsonElement(paramDeserializer, paramJsonObject)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                return@JsonRpcServer JsonRpcFailResponse(
-                    id = jsonRpcRequest.id,
-                    error = JsonRpcFailResponse.Error(
-                        code = JsonRpcFailResponse.Error.Code.ParseError,
-                        message = "Fail to parse as ${paramDeserializer.descriptor.serialName}: ${e.message}",
-                    )
-                )
-            }
-            val mcpResultJson = try {
-                when (mcpRequest) {
-                    is McpRoot.ListRequest -> JsonRpc.json.encodeToJsonElement(
-                        McpRoot.ListResponse.serializer(),
-                        onRoot(mcpRequest)
-                    )
+    private suspend fun handleJsonRpcRequest(request: JsonRpcRequest): JsonRpcServerSingleMessage {
+        val paramJsonObject = request.params as? JsonObject
+        val paramSerializer = McpServerRawRequest.serializerOf(request.method)
+            ?: return jsonRpcMethodNotSupportedResponse(request)
+        val mcpRequest = try {
+            JsonRpc.json.decodeFromJsonElement(paramSerializer, paramJsonObject ?: JsonNull)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            return jsonRpcParseErrorResponse(request, paramSerializer, e)
+        }
+        TODO()
+    }
 
-                    is McpSampling.CreateMessageRequest ->
-                        JsonRpc.json.encodeToJsonElement(
-                            McpSampling.CreateMessageResult.serializer(),
-                            onSampling(mcpRequest)
-                        )
-
-                    McpUtilities.Ping ->
-                        JsonRpc.json.encodeToJsonElement(
-                            McpUtilities.Pong.serializer(),
-                            McpUtilities.Pong
-                        )
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                return@JsonRpcServer JsonRpcFailResponse(
-                    id = jsonRpcRequest.id,
-                    error = JsonRpcFailResponse.Error(
-                        code = JsonRpcFailResponse.Error.Code.InternalError,
-                        message = e.stackTraceToString(),
-                    )
+    private suspend fun handleJsonRpcNotification(notification: JsonRpcNotification) {
+        try {
+            val deserializer = McpServerRawNotification.serializerOf(notification.method)
+                ?: throw McpMethodNotFoundException(notification)
+            val paramsJsonElement = notification.params as? JsonObject
+                ?: throw McpParamParseException(
+                    notification,
+                    IllegalArgumentException("Param should be JsonObject.")
                 )
-            }
-            JsonRpcSuccessResponse(
-                id = jsonRpcRequest.id,
-                result = mcpResultJson,
-            )
-        },
-        { jsonRpcNotification ->
-            val deserializer = McpServerNotification.deserializer(jsonRpcNotification.method)
-                ?: run {
-                    coroutineScope.errorHandler(McpMethodNotFoundException(jsonRpcNotification))
-                    return@JsonRpcServer
-                }
-            val paramsJsonElement = jsonRpcNotification.params as? JsonObject
-                ?: throw IllegalArgumentException("Missing params for notification method ${jsonRpcNotification.method}. Cannot deserialize from null.")
-            val deserializedNotification = try {
+            val mcpServerRawNotification = try {
                 JsonRpc.json.decodeFromJsonElement(deserializer, paramsJsonElement)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                coroutineScope.errorHandler(McpParamParseException(jsonRpcNotification, e.message ?: e.toString()))
-                return@JsonRpcServer
+                throw McpParamParseException(notification, e)
             }
-            try {
-                onNotification(deserializedNotification)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                coroutineScope.errorHandler(e)
-                return@JsonRpcServer
-            }
-            if (deserializedNotification is McpProgress.Notification) {
-                onGoingProgressMutex.withLock {
-                    ongoingProgress[deserializedNotification.progressToken]?.send(
-                        deserializedNotification
-                    )
-                }
-            }
+            onNotification(McpServerNotification(mcpServerRawNotification.notification, null))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            coroutineScope.uncaughtErrorHandler(e)
         }
-    )
-    override val jsonRpcClient = JsonRpcClient(transportPair.first)
+    }
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <R> call(mcpCall: McpClientCall<R>): R {
-        return when (mcpCall) {
-            is McpClientRequest<*> -> {
-                val jsonRpcResponse = jsonRpcClient.sendRequest(
-                    id = requestIdGenerator(),
-                    method = mcpCall.method,
-                    params = JsonRpc.json.encodeToJsonElement(McpClientRequest.serializer(), mcpCall)
-                )
-                JsonRpc.json.decodeFromJsonElement(mcpCall.resultDeserializer, jsonRpcResponse.result)
-            }
-
-            is McpClientNotification -> {
-                jsonRpcClient.sendNotification(
-                    method = mcpCall.method,
-                    params = JsonRpc.json.encodeToJsonElement(McpClientNotification.serializer(), mcpCall),
-                )
-            }
-
-            is McpProgress.ClientRequest<*, *> -> {
-                try {
-                    onGoingProgressMutex.withLock {
-                        ongoingProgress[mcpCall.rawRequest.token] = mcpCall.progressChannel
-                    }
-                    call(mcpCall.rawRequest)
-                } finally {
-                    onGoingProgressMutex.withLock {
-                        ongoingProgress.remove(mcpCall.rawRequest.token)
-                    }
-                    mcpCall.progressChannel.close()
-                }
-            }
-
-            is McpProgress.RawClientRequest<*, *> -> {
-                val jsonRpcResponse = jsonRpcClient.sendRequest(
-                    id = requestIdGenerator(),
-                    method = mcpCall.method,
-                    params = JsonRpc.json.encodeToJsonElement(
-                        McpProgress.RawClientRequest.serializer(
-                            Unit.serializer(),
-                            McpClientRequest.serializer() as KSerializer<McpClientRequest<*>>,
-                        ) as SerializationStrategy<McpProgress.RawClientRequest<*, *>>,
-                        mcpCall
-                    )
-                )
-                JsonRpc.json.decodeFromJsonElement(mcpCall.request.resultDeserializer, jsonRpcResponse.result)
-            }
-        } as R
+        TODO()
     }
 
     override suspend fun start() {
@@ -207,5 +101,32 @@ internal class McpClientImpl(
     }
 }
 
+private fun jsonRpcParseErrorResponse(
+    jsonRpcRequest: JsonRpcRequest,
+    paramDeserializer: KSerializer<*>,
+    e: Throwable
+): JsonRpcFailResponse = JsonRpcFailResponse(
+    id = jsonRpcRequest.id,
+    error = JsonRpcFailResponse.Error(
+        code = JsonRpcFailResponse.Error.Code.ParseError,
+        message = "Fail to parse as ${paramDeserializer.descriptor.serialName}: ${e.message}",
+    )
+)
+
+private fun jsonRpcMethodNotSupportedResponse(jsonRpcRequest: JsonRpcRequest): JsonRpcFailResponse =
+    JsonRpcFailResponse(
+        id = jsonRpcRequest.id,
+        error = JsonRpcFailResponse.Error(
+            code = JsonRpcFailResponse.Error.Code.MethodNotFound,
+            message = "Requested method ${jsonRpcRequest.method} is not supported",
+        )
+    )
+
+private fun pongResponse(id: RequestId): JsonRpcSuccessResponse =
+    JsonRpcSuccessResponse(
+        id = id,
+        result = JsonRpc.json.encodeToJsonElement(McpUtilities.Pong.serializer(), McpUtilities.Pong)
+    )
+
 private fun CoroutineScope.newChild(coroutineContext: CoroutineContext): CoroutineScope =
-    CoroutineScope(this.coroutineContext + coroutineContext + Job(this.coroutineContext[Job]))
+    CoroutineScope(this.coroutineContext + coroutineContext + SupervisorJob(this.coroutineContext[Job]))
