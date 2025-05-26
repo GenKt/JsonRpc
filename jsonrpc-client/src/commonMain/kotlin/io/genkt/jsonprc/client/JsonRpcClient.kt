@@ -33,7 +33,7 @@ public interface JsonRpcClient : AutoCloseable {
      * This method must be called before any requests or notifications can be sent.
      * Otherwise, [execute] blocks.
      */
-    public suspend fun start()
+    public fun start()
 
     /**
      * Executes a JSON-RPC client call.

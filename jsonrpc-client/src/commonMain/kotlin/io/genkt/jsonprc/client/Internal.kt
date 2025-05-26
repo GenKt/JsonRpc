@@ -17,7 +17,7 @@ internal class JsonRpcClientImpl(
     val callExecutor = callInterceptor(this::executeImpl)
     val requestMapMutex = Mutex()
     val requestMap = HashMap<RequestId, Continuation<JsonRpcSuccessResponse>>()
-    override suspend fun start() {
+    override fun start() {
         transport.start()
         coroutineScope.launch {
             transport.receiveFlow.collect { result ->
