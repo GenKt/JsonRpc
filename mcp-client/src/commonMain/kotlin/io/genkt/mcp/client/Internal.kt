@@ -152,8 +152,8 @@ internal class McpClientImpl(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override suspend fun <R> call(mcpCall: McpClientCall<R>): R {
-        return interceptedCallHandler(mcpCall) as R
+    override suspend fun <R> execute(call: McpClientCall<R>): R {
+        return interceptedCallHandler(call) as R
     }
 
     private val interceptedCallHandler = callInterceptor { handleCall(it) }
@@ -218,8 +218,8 @@ internal class McpClientImpl(
         jsonRpcTransport.start()
         jsonRpcServer.start()
         jsonRpcClient.start()
-        val result = call(request)
-        call(McpInit.InitializedNotification)
+        val result = execute(request)
+        execute(McpInit.InitializedNotification)
         return result
     }
 

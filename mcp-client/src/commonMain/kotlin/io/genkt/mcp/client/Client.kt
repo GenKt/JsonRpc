@@ -13,7 +13,7 @@ public interface McpClient: AutoCloseable {
     public val jsonRpcTransport: JsonRpcTransport
     public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
     public val coroutineScope: CoroutineScope
-    public suspend fun <R> call(mcpCall: McpClientCall<R>): R
+    public suspend fun <R> execute(call: McpClientCall<R>): R
     public suspend fun start(request: McpInit.InitializeRequest): McpInit.InitializeResult
 }
 
