@@ -17,20 +17,20 @@ import kotlin.time.Duration
  * @param transport The [JsonRpcServerTransport] to use for communication.
  * @param onRequest Handle incoming [JsonRpcRequest] messages and return [JsonRpcServerMessage] response.
  * @param onNotification Handle incoming [JsonRpcNotification] messages.
- * @param errorHandler Handle uncaught errors that are not processed with [onRequest] or [onNotification]. Defaults to an empty handler.
+ * @param uncaughtErrorHandler Handle uncaught errors that are not processed with [onRequest] or [onNotification]. Defaults to an empty handler.
  * @param additionalCoroutineContext Additional [CoroutineContext] elements to combine with the server's scope. Defaults to [EmptyCoroutineContext].
  */
 public fun JsonRpcServer(
     transport: JsonRpcServerTransport,
     onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
     onNotification: suspend (JsonRpcNotification) -> Unit,
-    errorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
     additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
 ): JsonRpcServer = JsonRpcServerImpl(
     transport,
     onRequest,
     onNotification,
-    errorHandler,
+    uncaughtErrorHandler,
     additionalCoroutineContext
 )
 
@@ -53,7 +53,7 @@ public fun JsonRpcServer.Builder.build(): JsonRpcServer =
         transport = transport,
         onRequest = requestInterceptor(onRequest),
         onNotification = notificationInterceptor(onNotification),
-        errorHandler = uncaughtErrorHandler,
+        uncaughtErrorHandler = uncaughtErrorHandler,
         additionalCoroutineContext = additionalCoroutineContext
     )
 

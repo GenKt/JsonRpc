@@ -40,7 +40,7 @@ suspend fun testJsonTransport(
                 throw IllegalArgumentException("Params cannot be null")
             receivedNotificationChannel.send(it)
         },
-        errorHandler = { serverErrorChannel.send(it) }
+        uncaughtErrorHandler = { serverErrorChannel.send(it) }
     )
     server.start()
     val client = JsonRpcClient {
