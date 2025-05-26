@@ -1,51 +1,40 @@
 package io.genkt.mcp.client
 
-import io.genkt.jsonrpc.*
+import io.genkt.jsonrpc.Interceptor
+import io.genkt.jsonrpc.JsonRpc
+import io.genkt.jsonrpc.JsonRpcTransport
+import io.genkt.jsonrpc.RequestId
 import io.genkt.mcp.common.dto.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.serialization.json.JsonObject
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-public interface McpClient {
-    public val info: McpInit.Implementation
-    public val capabilities: McpInit.ClientCapabilities
-    public val transport: JsonRpcTransport
+public interface McpClient: AutoCloseable {
+    public val jsonRpcTransport: JsonRpcTransport
     public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
-
     public val coroutineScope: CoroutineScope
     public suspend fun <R> call(mcpCall: McpClientCall<R>): R
-    public suspend fun start()
-    public suspend fun close()
-    public class Builder {
-        public var info: McpInit.Implementation =
-            McpInit.Implementation(
-                name = "GenKtMcpClient",
-                version = "0.0.1-SNAPSHOT"
-            )
-        public var experimentalCapabilities: JsonObject? = null
-        public var sampling: SamplingCapability? = null
-        public var root: RootCapability? = null
-        public var transport: JsonRpcTransport =
-            Transport.ThrowingException { error("Using an uninitialized transport") }
-        public var uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {}
-        public var onNotification: suspend (McpServerNotification<McpServerBasicNotification>) -> Unit = {}
-        public var requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator()
-        public var progressTokenGenerator: () -> McpProgress.Token = McpProgress.defaultStringTokenGenerator
-        public var additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext
-        public var callInterceptor: Interceptor<suspend (McpClientCall<*>) -> Any?> = { it }
-        public var onCallInterceptor: Interceptor<suspend (McpServerNotification<McpServerBasicNotification>) -> Unit> =
-            { it }
-
-        public class RootCapability {
-            public var onListRequest: (suspend (McpServerRequest<McpRoot.ListRequest, McpRoot.ListResponse>) -> McpRoot.ListResponse) =
-                { throw NotImplementedError() }
-            public var listChanged: Boolean = false
-        }
-
-        public class SamplingCapability {
-            public var onCreateMessageRequest: (suspend (McpServerRequest<McpSampling.CreateMessageRequest, McpSampling.CreateMessageResult>) -> McpSampling.CreateMessageResult) =
-                { throw NotImplementedError() }
-        }
-    }
+    public suspend fun start(request: McpInit.InitializeRequest): McpInit.InitializeResult
 }
+
+public fun McpClient(
+    jsonRpcTransport: JsonRpcTransport,
+    onRoot: suspend (McpServerRequest<McpRoot.ListRequest, McpRoot.ListResponse>) -> McpRoot.ListResponse,
+    onSampling: suspend (McpServerRequest<McpSampling.CreateMessageRequest, McpSampling.CreateMessageResult>) -> McpSampling.CreateMessageResult,
+    onNotification: suspend (McpServerNotification<McpServerBasicNotification>) -> Unit,
+    requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
+    progressTokenGenerator: () -> McpProgress.Token = McpProgress.defaultStringTokenGenerator,
+    uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    callInterceptor: Interceptor<suspend (McpClientCall<*>) -> Any?> = { it },
+    additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
+): McpClient = McpClientImpl(
+    jsonRpcTransport,
+    onRoot,
+    onSampling,
+    onNotification,
+    requestIdGenerator,
+    progressTokenGenerator,
+    uncaughtErrorHandler,
+    callInterceptor,
+    additionalCoroutineContext,
+)

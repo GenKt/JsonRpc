@@ -22,26 +22,24 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
 
+
 internal class McpClientImpl(
-    override val info: McpInit.Implementation,
-    override val capabilities: McpInit.ClientCapabilities,
+    override val jsonRpcTransport: JsonRpcTransport,
     val onRoot: suspend (McpServerRequest<McpRoot.ListRequest, McpRoot.ListResponse>) -> McpRoot.ListResponse,
     val onSampling: suspend (McpServerRequest<McpSampling.CreateMessageRequest, McpSampling.CreateMessageResult>) -> McpSampling.CreateMessageResult,
     val onNotification: suspend (McpServerNotification<McpServerBasicNotification>) -> Unit,
-    override val transport: JsonRpcTransport,
-    val requestIdGenerator: () -> RequestId = JsonRpc.NumberIdGenerator(),
-    val progressTokenGenerator: () -> McpProgress.Token = McpProgress.defaultStringTokenGenerator,
-    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
-    callInterceptor: Interceptor<suspend (McpClientCall<*>) -> Any?> = { it },
-    additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
+    val requestIdGenerator: () -> RequestId,
+    val progressTokenGenerator: () -> McpProgress.Token,
+    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit,
+    callInterceptor: Interceptor<suspend (McpClientCall<*>) -> Any?>,
+    additionalCoroutineContext: CoroutineContext,
 ) : McpClient {
-    override val coroutineScope = transport.coroutineScope.newChild(additionalCoroutineContext)
+    override val coroutineScope = jsonRpcTransport.coroutineScope.newChild(additionalCoroutineContext)
     private val onGoingProgressMutex = Mutex()
     private val ongoingProgress = mutableMapOf<McpProgress.Token, SendChannel<McpProgress.Notification>>()
-    private val transportPair = transport.shareAsClientAndServerIn()
+    private val transportPair = jsonRpcTransport.shareAsClientAndServerIn()
     private val jsonRpcServer = JsonRpcServer(
         transport = transportPair.second,
         onRequest = ::handleJsonRpcRequest,
@@ -216,15 +214,17 @@ internal class McpClientImpl(
         )
     }
 
-    override suspend fun start() {
-        transport.start()
+    override suspend fun start(request: McpInit.InitializeRequest): McpInit.InitializeResult {
+        jsonRpcTransport.start()
         jsonRpcServer.start()
         jsonRpcClient.start()
-        coroutineScope.cancel()
+        val result = call(request)
+        call(McpInit.InitializedNotification)
+        return result
     }
 
-    override suspend fun close() {
-        transport.close()
+    override fun close() {
+        jsonRpcTransport.close()
         jsonRpcServer.close()
         jsonRpcClient.close()
         coroutineScope.cancel()
