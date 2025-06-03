@@ -5,7 +5,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "mcp-sdk"
+rootProject.name = "jsonrpc"
 
 include(
     "serialization-json",
