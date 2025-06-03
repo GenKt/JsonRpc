@@ -9,7 +9,7 @@ import kotlin.coroutines.CoroutineContext
 
 internal class JsonRpcClientImpl(
     override val transport: JsonRpcClientTransport,
-    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit,
+    val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit,
     callInterceptor: Interceptor<suspend (JsonRpcClientCall<*>) -> Any?>,
     additionalCoroutineContext: CoroutineContext,
 ) : JsonRpcClient {
