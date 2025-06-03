@@ -12,7 +12,7 @@ internal class JsonRpcServerImpl(
     override val transport: JsonRpcServerTransport,
     val onRequest: suspend (JsonRpcRequest) -> JsonRpcServerMessage,
     val onNotification: suspend (JsonRpcNotification) -> Unit,
-    override val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
+    val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit = {},
     additionalCoroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) : JsonRpcServer {
     override val coroutineScope: CoroutineScope = transport.coroutineScope.newChild(additionalCoroutineContext)

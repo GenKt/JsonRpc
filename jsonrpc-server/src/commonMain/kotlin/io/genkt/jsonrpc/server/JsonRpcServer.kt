@@ -20,10 +20,6 @@ public interface JsonRpcServer : AutoCloseable {
      */
     public val transport: JsonRpcServerTransport
     /**
-     * A handler for uncaught exceptions which are not handled by request/notification handlers.
-     */
-    public val uncaughtErrorHandler: suspend CoroutineScope.(Throwable) -> Unit
-    /**
      * The [CoroutineScope] used by this server for all its operations.
      * Closing it won't close the underlying [transport].
      */
