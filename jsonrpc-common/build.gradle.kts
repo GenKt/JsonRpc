@@ -9,7 +9,6 @@ kotlin {
             dependencies {
                 api(libs.kotlinx.coroutine.core)
                 api(libs.kotlinx.serialization.json)
-                api(libs.kotlinx.io.core)
                 api(project(":serialization-json"))
                 implementation(libs.streamlin)
             }
